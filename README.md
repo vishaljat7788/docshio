@@ -2,15 +2,15 @@
 
 PDF tools web app. The browser sends files to a Node.js (Express) server, the server processes them, and the result is downloaded. Uploaded files and results are deleted automatically (after 30 minutes by default).
 
-Tools include Merge, Split, Remove pages, Rotate, Images to PDF, PDF to JPG, Compress, Watermark, Page numbers, Office and HTML conversions, typed PDF annotation/signature, and password protect/unlock.
+Tools include page organizing, PDF repair/cropping/redaction/comparison, form inspection, OCR and PDF/A conversion, PDF to Markdown, a local extractive summarizer, offline English-to-Hindi PDF translation, Merge, Split, Remove pages, Rotate, Images to PDF, PDF to JPG, Compress, Watermark, Page numbers, Office and HTML conversions, typed PDF annotation/signature, and password protect/unlock.
 
 ## Run locally
 
-You need Node.js 18 or newer. PDF-to-JPG runs in the browser with PDF.js; the server-side API fallback uses poppler-utils.
+You need Node.js 18 or newer. PDF-to-JPG runs in the browser with PDF.js; PDF text extraction, comparison and redaction use poppler-utils. OCR and PDF/A conversion use OCRmyPDF and Tesseract. Offline translation needs Argos Translate with the English-to-Hindi model, and LibreOffice creates the translated PDF. The Docker image installs these components and the language model during its build; document files stay inside the running server.
 
 1. Install the system programs
    - Mac: `brew install poppler`
-   - Ubuntu/Debian: `sudo apt install poppler-utils`
+   - Ubuntu/Debian: `sudo apt install poppler-utils qpdf ocrmypdf tesseract-ocr`
    - Windows: install poppler and add its `bin` folder to PATH. Docker (below) is easier on Windows.
 2. In this folder run:
    ```

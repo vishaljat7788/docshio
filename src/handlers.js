@@ -85,6 +85,176 @@ async function imageForPdf(file) {
 /* ------------------------------------------------------------ handlers */
 const handlers = new Map();
 
+handlers.set('organize-pdf', async (files, o) => {
+  const src = await loadPdf(files[0]);
+  const total = src.getPageCount();
+  const order = o.order.split(',').map(x => Number(x.trim()));
+  if (order.length !== total || order.some(n => !Number.isInteger(n) || n < 1 || n > total) || new Set(order).size !== total) {
+    throw new UserError(`Enter each page number from 1 to ${total} exactly once.`);
+  }
+  const out = await PDFDocument.create();
+  (await out.copyPages(src, order.map(n => n - 1))).forEach(p => out.addPage(p));
+  return [{ name: `${baseName(files[0].name)}-organized.pdf`, data: await pdfBytes(out) }];
+});
+
+handlers.set('repair-pdf', async (files, _o, ctx) => {
+  const out = path.join(ctx.scratch, `${baseName(files[0].name)}-repaired.pdf`);
+  await runBinary('qpdf', [files[0].path, out], 'PDF repair is unavailable on this server (qpdf is not installed).');
+  try { return [{ name: path.basename(out), data: await fs.readFile(out) }]; }
+  catch (_) { throw new UserError('The PDF could not be repaired. Its contents may be too damaged.'); }
+});
+
+handlers.set('crop-pdf', async (files, o) => {
+  const doc = await loadPdf(files[0]);
+  const margin = o.margin;
+  for (const page of doc.getPages()) {
+    const { x, y, width, height } = page.getCropBox();
+    if (margin * 2 >= width || margin * 2 >= height) throw new UserError('The crop margin is too large for one or more pages.');
+    page.setCropBox(x + margin, y + margin, width - margin * 2, height - margin * 2);
+  }
+  return [{ name: `${baseName(files[0].name)}-cropped.pdf`, data: await pdfBytes(doc) }];
+});
+
+handlers.set('compare-pdf', async (files, _o, ctx) => {
+  const extracted = [];
+  for (const [i, file] of files.entries()) {
+    const txt = path.join(ctx.scratch, `compare-${i}.txt`);
+    await runBinary('pdftotext', ['-layout', file.path, txt], 'PDF text comparison is unavailable on this server (poppler-utils is not installed).');
+    extracted.push((await fs.readFile(txt, 'utf8')).replace(/\r/g, '').trim());
+  }
+  const a = extracted[0].split('\n'), b = extracted[1].split('\n');
+  const lines = ['# PDF comparison', '', `- First file: ${files[0].name}`, `- Second file: ${files[1].name}`, '', '## Text differences', ''];
+  const count = Math.max(a.length, b.length);
+  for (let i = 0; i < count; i++) if (a[i] !== b[i]) {
+    if (a[i] !== undefined) lines.push(`- ${a[i]}`);
+    if (b[i] !== undefined) lines.push(`+ ${b[i]}`);
+  }
+  if (lines.length === 7) lines.push('No text differences found.');
+  return [{ name: 'pdf-comparison.md', data: Buffer.from(lines.join('\n'), 'utf8') }];
+});
+
+handlers.set('pdf-to-markdown', async (files, _o, ctx) => {
+  const txt = path.join(ctx.scratch, 'extracted.txt');
+  await runBinary('pdftotext', ['-layout', files[0].path, txt], 'PDF to Markdown is unavailable on this server (poppler-utils is not installed).');
+  const text = (await fs.readFile(txt, 'utf8')).replace(/\r/g, '').trim();
+  if (!text) throw new UserError('No selectable text was found in this PDF. Scanned pages need OCR first.');
+  const markdown = `# ${baseName(files[0].name)}\n\n${text.split(/\n{2,}/).map(block => block.trim().replace(/\n/g, '  \n')).join('\n\n')}\n`;
+  return [{ name: `${baseName(files[0].name)}.md`, data: Buffer.from(markdown, 'utf8') }];
+});
+
+handlers.set('ai-summarizer', async (files, o, ctx) => {
+  const txt = path.join(ctx.scratch, 'summary-source.txt');
+  await runBinary('pdftotext', ['-layout', files[0].path, txt], 'PDF summarizing is unavailable on this server (poppler-utils is not installed).');
+  const text = (await fs.readFile(txt, 'utf8')).replace(/\f/g, '\n\n').replace(/\r/g, '').trim();
+  if (!text) throw new UserError('No selectable text was found. Run OCR first for a scanned PDF.');
+  const sentences = text.split(/(?<=[.!?])\s+|\n{2,}/).map(s => s.replace(/\s+/g, ' ').trim()).filter(s => s.length > 30);
+  if (!sentences.length) throw new UserError('There is not enough readable text to summarize.');
+  if (sentences.length > 1500) throw new UserError('This PDF has too much text to summarize at once. Try a shorter PDF.');
+  const stop = new Set('a an and are as at be been but by for from had has have he her his i in is it its of on or our she that the their them they this to was we were will with you your'.split(' '));
+  const tokens = sentences.map(s => (s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []).filter(w => !stop.has(w)));
+  const freq = new Map();
+  tokens.flat().forEach(w => freq.set(w, (freq.get(w) || 0) + 1));
+  const scored = sentences.map((sentence, i) => ({ sentence, i, score: tokens[i].reduce((n, w) => n + Math.log1p(freq.get(w)), 0) / Math.sqrt(Math.max(tokens[i].length, 1)) }));
+  const portion = { short: 0.1, balanced: 0.2, detailed: 0.35 }[o.length];
+  const count = Math.max(1, Math.min(sentences.length, Math.ceil(sentences.length * portion)));
+  const summary = scored.sort((a, b) => b.score - a.score).slice(0, count).sort((a, b) => a.i - b.i).map(s => s.sentence);
+  const markdown = `# Summary: ${baseName(files[0].name)}\n\n${summary.map(s => `- ${s}`).join('\n')}\n\n---\nGenerated locally from selectable text. The PDF was not sent to an external service.\n`;
+  return [{ name: `${baseName(files[0].name)}-summary.md`, data: Buffer.from(markdown, 'utf8'), note: 'Local extractive summary; review it against the original document.' }];
+});
+
+handlers.set('translate-pdf', async (files, _o, ctx) => {
+  const source = path.join(ctx.scratch, 'translation-source.txt');
+  const translated = path.join(ctx.scratch, 'translation-hi.txt');
+  await runBinary('pdftotext', ['-layout', files[0].path, source], 'PDF translation is unavailable on this server (poppler-utils is not installed).');
+  const sourceText = (await fs.readFile(source, 'utf8')).replace(/\f/g, '\n\n').trim();
+  if (!sourceText) throw new UserError('No selectable text was found. Run OCR first for a scanned PDF.');
+  if (sourceText.length > 200000) throw new UserError('This PDF has too much text to translate at once. Try a shorter PDF.');
+  const python = process.env.ARGOS_PYTHON || (process.platform === 'win32' ? 'python' : '/opt/argos/bin/python');
+  try {
+    await execFileP(python, [path.join(__dirname, '..', 'scripts', 'argos_translate.py'), source, translated], { timeout: TOOL_TIMEOUT_MS, maxBuffer: 1024 * 1024 });
+  } catch (e) {
+    if (e.code === 'ENOENT') throw new UserError('Offline English-to-Hindi translation is not installed on this server.', 501);
+    if (e.killed) throw new UserError('This PDF took too long to translate. Try a shorter file.', 408);
+    throw new UserError('Offline translation could not process this PDF. Check that the English-to-Hindi model is installed.');
+  }
+  const translatedText = (await fs.readFile(translated, 'utf8')).trim();
+  if (!translatedText) throw new UserError('The translator returned no text.');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:22mm}body{font-family:"Noto Sans Devanagari",sans-serif;font-size:12pt;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}h1{font-size:18pt}</style></head><body><h1>हिंदी अनुवाद: ${baseName(files[0].name).replace(/[&<>"']/g, '')}</h1>${translatedText.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</body></html>`;
+  const htmlPath = path.join(ctx.scratch, 'translated.html');
+  await fs.writeFile(htmlPath, html, 'utf8');
+  const office = process.platform === 'win32' ? path.join(process.env.ProgramFiles || 'C:\\Program Files', 'LibreOffice', 'program', 'soffice.com') : 'libreoffice';
+  const profileUrl = pathToFileURL(path.join(ctx.scratch, 'translate-lo-profile')).href;
+  try { await runBinary(office, [`-env:UserInstallation=${profileUrl}`, '--headless', '--convert-to', 'pdf', '--outdir', ctx.scratch, htmlPath], 'PDF creation is unavailable on this server (LibreOffice is not installed).'); }
+  catch (e) { if (e instanceof UserError) throw e; throw new UserError('The translated text could not be saved as a PDF.'); }
+  const output = path.join(ctx.scratch, 'translated.pdf');
+  return [{ name: `${baseName(files[0].name)}-hindi.pdf`, data: await fs.readFile(output), note: 'Translated locally with an offline machine-translation model. Review the translation for accuracy.' }];
+});
+
+handlers.set('pdf-forms', async files => {
+  const doc = await loadPdf(files[0]);
+  let fields = [];
+  try {
+    fields = doc.getForm().getFields().map(field => ({ name: field.getName(), type: field.constructor.name }));
+  } catch (_) { /* A PDF without an AcroForm has no interactive fields. */ }
+  const report = fields.length ? fields.map(f => `- ${f.name} (${f.type})`).join('\n') : 'No interactive form fields were found.';
+  return [{ name: `${baseName(files[0].name)}-form-fields.txt`, data: Buffer.from(report + '\n', 'utf8') }];
+});
+
+handlers.set('redact-pdf', async (files, o, ctx) => {
+  const regions = o.regions.split(/\r?\n/).map(x => x.trim()).filter(Boolean).map(line => {
+    const values = line.split(',').map(Number);
+    if (values.length !== 5 || values.some(v => !Number.isFinite(v))) throw new UserError('Each redaction area must be page,x,y,width,height.');
+    const [page, x, y, width, height] = values;
+    if (!Number.isInteger(page) || page < 1 || [x, y, width, height].some(v => v < 0) || !width || !height) throw new UserError('Redaction areas need a valid page and positive rectangle size.');
+    return { page: page - 1, x, y, width, height };
+  });
+  if (!regions.length) throw new UserError('Enter at least one redaction area.');
+  const doc = await loadPdf(files[0]);
+  if (regions.some(r => r.page >= doc.getPageCount())) throw new UserError('A redaction area refers to a page that does not exist.');
+  if (doc.getPages().some(p => p.getRotation().angle % 360 !== 0)) throw new UserError('Rotate pages upright before redacting this PDF.');
+  for (const r of regions) {
+    const box = doc.getPages()[r.page].getCropBox();
+    if (r.x + r.width > box.width || r.y + r.height > box.height) throw new UserError(`A redaction area exceeds page ${r.page + 1}.`);
+  }
+  const prefix = path.join(ctx.scratch, 'redact');
+  await runBinary('pdftoppm', ['-png', '-r', '150', files[0].path, prefix], 'PDF redaction is unavailable on this server (poppler-utils is not installed).');
+  const names = (await fs.readdir(ctx.scratch)).filter(n => /^redact-\d+\.png$/.test(n)).sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]));
+  if (names.length !== doc.getPageCount()) throw new UserError('The PDF could not be rendered safely for redaction.');
+  const out = await PDFDocument.create();
+  for (const [i, name] of names.entries()) {
+    const imagePath = path.join(ctx.scratch, name);
+    const imageMeta = await sharp(imagePath).metadata();
+    const box = doc.getPages()[i].getCropBox();
+    const scaleX = imageMeta.width / box.width, scaleY = imageMeta.height / box.height;
+    const overlays = regions.filter(r => r.page === i).map(r => ({
+      input: Buffer.from(`<svg width="${imageMeta.width}" height="${imageMeta.height}"><rect x="${Math.round(r.x * scaleX)}" y="${Math.round((box.height - r.y - r.height) * scaleY)}" width="${Math.ceil(r.width * scaleX)}" height="${Math.ceil(r.height * scaleY)}" fill="black"/></svg>`),
+      left: 0, top: 0
+    }));
+    const imageBytes = overlays.length ? await sharp(imagePath).composite(overlays).png().toBuffer() : await fs.readFile(imagePath);
+    const image = await out.embedPng(imageBytes);
+    const page = out.addPage([box.width, box.height]);
+    page.drawImage(image, { x: 0, y: 0, width: box.width, height: box.height });
+  }
+  return [{ name: `${baseName(files[0].name)}-redacted.pdf`, data: await pdfBytes(out), note: 'Pages were flattened to images so covered text cannot be selected or recovered. Review the output to confirm every intended area was covered.' }];
+});
+
+for (const [id, outputType, suffix, missing] of [
+  ['ocr-pdf', 'pdf', 'searchable', 'OCR is unavailable on this server (OCRmyPDF and Tesseract are not installed).'],
+  ['pdf-to-pdfa', 'pdfa-2', 'pdfa', 'PDF/A conversion is unavailable on this server (OCRmyPDF is not installed).']
+]) {
+  handlers.set(id, async (files, _o, ctx) => {
+    const out = path.join(ctx.scratch, `${baseName(files[0].name)}-${suffix}.pdf`);
+    const args = ['--skip-text', '--output-type', outputType, '--optimize', '1', files[0].path, out];
+    try { await runBinary('ocrmypdf', args, missing); }
+    catch (e) {
+      if (e instanceof UserError) throw e;
+      if (/encrypted|password/i.test(`${e.stderr || ''} ${e.message || ''}`)) throw new UserError('This PDF is password protected. Remove its password first.');
+      throw new UserError(id === 'ocr-pdf' ? 'OCR could not process this PDF. Check that it contains readable scanned pages.' : 'The PDF could not be converted to PDF/A.');
+    }
+    return [{ name: path.basename(out), data: await fs.readFile(out) }];
+  });
+}
+
 handlers.set('merge', async files => {
   const out = await PDFDocument.create();
   for (const f of files) {

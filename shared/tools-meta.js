@@ -16,6 +16,17 @@
   ];
 
   const tools = [
+    { id: 'organize-pdf', title: 'Organize PDF', group: 'organize', kind: 'pdf', blurb: 'Reorder PDF pages by entering the page numbers in the order you want.', action: 'Organize PDF', options: [{ key: 'order', label: 'Page order', type: 'text', value: '1,2,3', maxLength: 2000, hint: 'Example: 3,1,2. Each page must appear once.' }] },
+    { id: 'repair-pdf', title: 'Repair PDF', group: 'optimize', kind: 'pdf', blurb: 'Rewrite a damaged PDF structure when its contents can still be recovered.', action: 'Repair PDF', options: [] },
+    { id: 'crop-pdf', title: 'Crop PDF', group: 'edit', kind: 'pdf', blurb: 'Crop the same margin from every page of your PDF.', action: 'Crop PDF', options: [{ key: 'margin', label: 'Margin to crop (points)', type: 'number', value: 24, min: 0, max: 300, hint: 'PDF points; 72 points equal one inch.' }] },
+    { id: 'compare-pdf', title: 'Compare PDF', group: 'organize', kind: 'pdf', multiple: true, min: 2, blurb: 'Extract and compare the text in two PDF files.', action: 'Compare PDFs', options: [] },
+    { id: 'pdf-to-markdown', title: 'PDF to Markdown', group: 'convert-from', kind: 'pdf', blurb: 'Extract selectable PDF text into a Markdown file.', action: 'Convert to Markdown', options: [] },
+    { id: 'pdf-forms', title: 'PDF Forms', group: 'edit', kind: 'pdf', blurb: 'List interactive form fields found in a PDF.', action: 'Inspect PDF forms', options: [] },
+    { id: 'ocr-pdf', title: 'OCR PDF', group: 'optimize', kind: 'pdf', blurb: 'Recognize text in scanned pages and add a searchable text layer.', action: 'Run OCR', options: [] },
+    { id: 'pdf-to-pdfa', title: 'PDF to PDF/A', group: 'convert-from', kind: 'pdf', blurb: 'Convert a PDF to the PDF/A-2b archival format.', action: 'Convert to PDF/A', options: [] },
+    { id: 'redact-pdf', title: 'Redact PDF', group: 'edit', kind: 'pdf', blurb: 'Permanently cover selected areas and flatten every page to remove the underlying text.', action: 'Redact PDF', options: [{ key: 'regions', label: 'Redaction areas', type: 'text', value: '', maxLength: 4000, hint: 'One per line: page,x,y,width,height in PDF points, from the bottom-left. Example: 1,72,400,180,24' }] },
+    { id: 'ai-summarizer', title: 'AI Summarizer', group: 'optimize', kind: 'pdf', blurb: 'Create a short local extractive summary from selectable PDF text. Files stay on this server.', action: 'Summarize PDF', options: [{ key: 'length', label: 'Summary length', type: 'select', value: 'balanced', choices: [['short', 'Short'], ['balanced', 'Balanced'], ['detailed', 'Detailed']] }] },
+    { id: 'translate-pdf', title: 'Translate PDF', group: 'convert-from', kind: 'pdf', blurb: 'Translate selectable English PDF text into Hindi with an offline server model. The output is a newly typeset PDF.', action: 'Translate to Hindi', options: [] },
     {
       id: 'merge', title: 'Merge PDF', group: 'organize', kind: 'pdf',
       blurb: 'Combine several PDFs into one, in the order you choose.',
