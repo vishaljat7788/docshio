@@ -97,6 +97,7 @@ main { flex: 1; width: 100%; max-width: 1500px; margin: 0 auto; padding: 32px 20
 .group-convert-to { --tint: var(--c-convert-to); }
 .group-convert-from { --tint: var(--c-convert-from); }
 .group-edit { --tint: var(--c-edit); }
+.group-photos { --tint: #7458bd; }
 
 /* ---------- tool page */
 .back { color: var(--ink-soft); text-decoration: none; font-size: .95rem; }
@@ -104,6 +105,8 @@ main { flex: 1; width: 100%; max-width: 1500px; margin: 0 auto; padding: 32px 20
 .back:hover { color: var(--ink); text-decoration: underline; }
 .tool h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); letter-spacing: -0.03em; margin: 12px 0 6px; font-weight: 800; }
 .lede { margin: 0 0 20px; color: var(--ink-soft); font-size: 1.05rem; }
+.tool-instructions { margin: -8px 0 18px; color: var(--ink-soft); font-size: .92rem; }
+.tool-instructions b { color: var(--ink); }
 .notice {
   margin: 0 0 20px; padding: 12px 14px; border-left: 4px solid var(--c-optimize);
   background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; font-size: .95rem;
@@ -300,6 +303,7 @@ main { max-width: 1500px; padding: 30px 28px 76px; }
 .group-convert-to { --tint: var(--c-convert-to); }
 .group-convert-from { --tint: var(--c-convert-from); }
 .group-edit { --tint: var(--c-edit); }
+.group-photos { --tint: #7458bd; }
 .tool h1 { color: #292c36; }
 .right, .file, .results { border-radius: 13px; box-shadow: 0 4px 18px rgba(40,42,54,.035); }
 .drop { border-radius: 13px; }
@@ -415,7 +419,7 @@ main { max-width: 1500px; padding: 30px 28px 76px; }
 .contact-placeholder small { color: #858997; font-size: .8rem; }
 .contact-card .ghost { display: inline-block; text-decoration: none; }
 .mega-popover {
-  left: 50%; right: auto; width: min(1400px, calc(100vw - 32px)); grid-template-columns: repeat(7, minmax(0, 1fr));
+  left: 50%; right: auto; width: min(1400px, calc(100vw - 32px)); grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 12px; padding: 22px 20px; transform: translateX(-50%);
 }
 .mega-group { min-width: 0; }

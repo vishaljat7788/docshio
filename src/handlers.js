@@ -25,6 +25,7 @@ const execFileP = promisify(execFile);
 const MAX_RENDER_PAGES = parseInt(process.env.MAX_RENDER_PAGES || '200', 10);
 const TOOL_TIMEOUT_MS = parseInt(process.env.TOOL_TIMEOUT_SECONDS || '120', 10) * 1000;
 const MAX_IMAGE_PIXELS = 100e6;
+const MAX_PHOTO_PIXELS = 20e6;
 
 const pdfBytes = async doc => Buffer.from(await doc.save());
 
@@ -643,5 +644,115 @@ for (const [id, mode] of [['protect-pdf', 'encrypt'], ['unlock-pdf', 'decrypt']]
     return [{ name: path.basename(out), data: await fs.readFile(out) }];
   });
 }
+
+/* ------------------------------------------------------------ photo tools */
+async function photoInput(file) {
+  try {
+    const image = sharp(file.path, { limitInputPixels: MAX_PHOTO_PIXELS }).rotate();
+    const meta = await image.metadata();
+    if (!meta.width || !meta.height || meta.width * meta.height > MAX_PHOTO_PIXELS) {
+      throw new UserError('This photo is too large to process. Use an image under 20 megapixels.');
+    }
+    return image;
+  } catch (err) {
+    if (err instanceof UserError) throw err;
+    throw new UserError(`"${file.name}" is not a supported image.`);
+  }
+}
+
+function photoExt(format) { return format === 'jpeg' ? 'jpg' : format; }
+function formatImage(image, format) {
+  if (format === 'jpeg') return image.flatten({ background: '#ffffff' }).jpeg({ quality: 92, mozjpeg: true });
+  if (format === 'webp') return image.webp({ quality: 92 });
+  return image.png({ compressionLevel: 9 });
+}
+
+handlers.set('photo-resizer', async (files, o) => {
+  const w = Math.round(o.width), h = Math.round(o.height);
+  const input = await photoInput(files[0]);
+  const data = await formatImage(input.resize(w, h, { fit: o.fit, background: '#ffffff' }), o.format).toBuffer();
+  return [{ name: `${baseName(files[0].name)}-${w}x${h}.${photoExt(o.format)}`, data }];
+});
+
+handlers.set('signature-resizer', async (files, o) => {
+  const w = Math.round(o.width), h = Math.round(o.height);
+  const input = await photoInput(files[0]);
+  const output = await formatImage(input.resize(w, h, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }), o.format).toBuffer();
+  return [{ name: `${baseName(files[0].name)}-${w}x${h}.${photoExt(o.format)}`, data: output }];
+});
+
+async function removePlainBackground(input, background, sensitivity) {
+  const { data, info } = await input.ensureAlpha().toColourspace('srgb').raw().toBuffer({ resolveWithObject: true });
+  const at = (x, y) => {
+    const i = (y * info.width + x) * info.channels;
+    return [data[i], data[i + 1], data[i + 2]];
+  };
+  let key;
+  if (background === 'white') key = [255, 255, 255];
+  else if (background === 'black') key = [0, 0, 0];
+  else if (background === 'blue') key = [173, 216, 230];
+  else {
+    const corners = [at(0, 0), at(info.width - 1, 0), at(0, info.height - 1), at(info.width - 1, info.height - 1)];
+    key = [0, 1, 2].map(c => Math.round(corners.reduce((sum, p) => sum + p[c], 0) / corners.length));
+  }
+  const threshold = Math.round(sensitivity * 4.4);
+  const soft = 28;
+  for (let i = 0; i < data.length; i += info.channels) {
+    const distance = Math.hypot(data[i] - key[0], data[i + 1] - key[1], data[i + 2] - key[2]);
+    if (distance <= threshold) data[i + 3] = 0;
+    else if (distance < threshold + soft) data[i + 3] = Math.min(data[i + 3], Math.round((distance - threshold) / soft * 255));
+  }
+  return sharp(data, { raw: info }).png({ compressionLevel: 9 }).toBuffer();
+}
+
+handlers.set('photo-background-remover', async (files, o) => {
+  const input = await photoInput(files[0]);
+  const output = await removePlainBackground(input, o.background, o.sensitivity);
+  return [{ name: `${baseName(files[0].name)}-transparent.png`, data: output, note: 'Removes a plain background color. Detailed or uneven backgrounds may need an AI background-removal service.' }];
+});
+
+handlers.set('passport-photo-maker', async (files, o) => {
+  const dimensions = o.size === '2x2' ? [600, 600] : o.size === 'custom' ? [Math.round(o.width), Math.round(o.height)] : [413, 531];
+  const [w, h] = dimensions;
+  const input = await photoInput(files[0]);
+  const transparent = await removePlainBackground(input, 'auto', 23);
+  const data = await sharp(transparent).resize(w, h, { fit: 'cover', position: 'attention', background: '#ffffff' }).flatten({ background: '#ffffff' }).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
+  return [{ name: `${baseName(files[0].name)}-passport-${w}x${h}.jpg`, data, note: 'The image is center-cropped to the selected dimensions; verify your destination authority’s photo rules before submitting.' }];
+});
+
+handlers.set('image-to-kb', async (files, o) => {
+  const input = await photoInput(files[0]);
+  const meta = await input.metadata();
+  const limit = Number(o.target) * 1024;
+  let w = meta.width, h = meta.height;
+  for (let attempt = 0; attempt < 22; attempt++) {
+    for (const quality of [82, 72, 62, 52, 42, 32, 24]) {
+      const data = await input.clone().resize(w, h, { fit: 'inside', withoutEnlargement: true }).flatten({ background: '#ffffff' }).jpeg({ quality, mozjpeg: true }).toBuffer();
+      if (data.length <= limit) return [{ name: `${baseName(files[0].name)}-${o.target}kb.jpg`, data, note: `Compressed to ${Math.ceil(data.length / 1024)} KB (maximum ${o.target} KB).` }];
+    }
+    w = Math.max(64, Math.floor(w * 0.88));
+    h = Math.max(64, Math.floor(h * 0.88));
+  }
+  throw new UserError('Could not reach the selected file size. Try a smaller image.');
+});
+
+handlers.set('photo-signature-combiner', async (files, o) => {
+  if (files.length !== 2) throw new UserError('Choose exactly two images: photo first, signature second.');
+  const width = Number(o.width);
+  const height = Math.round(width * 0.66);
+  const padding = Math.round(width * 0.055);
+  const photoWidth = Math.round(width * 0.42);
+  const photoHeight = height - padding * 2;
+  const signatureWidth = width - photoWidth - padding * 3;
+  const signatureHeight = Math.round(height * 0.42);
+  const [photo, signature] = await Promise.all(files.map(photoInput));
+  const photoBuffer = await photo.resize(photoWidth, photoHeight, { fit: 'contain', background: '#ffffff' }).flatten({ background: '#ffffff' }).jpeg({ quality: 92 }).toBuffer();
+  const signatureBuffer = await signature.resize(signatureWidth, signatureHeight, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer();
+  const data = await sharp({ create: { width, height, channels: 3, background: '#ffffff' } }).composite([
+    { input: photoBuffer, left: padding, top: padding },
+    { input: signatureBuffer, left: photoWidth + padding * 2, top: Math.round((height - signatureHeight) / 2) }
+  ]).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
+  return [{ name: `${baseName(files[0].name)}-photo-signature.jpg`, data, note: 'Combined in upload order: photo first, signature second.' }];
+});
 
 module.exports = { handlers };

@@ -81,7 +81,13 @@
     'edit-pdf': '<path d="m4 16 10-10 4 4L8 20H4zM12 8l4 4M4 20h16"/>',
     'sign-pdf': '<path d="M4 18c3-5 4-7 5-6s-1 5 1 5 3-6 4-6 0 5 2 5c1 0 2-1 4-2M5 21h14"/>',
     'protect-pdf': '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3M12 14v3"/>',
-    'unlock-pdf': '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7-2M12 14v3"/>'
+    'unlock-pdf': '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7-2M12 14v3"/>',
+    'photo-resizer': '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 17 5-4 3 2 3-4 5 6"/>',
+    'signature-resizer': '<path d="M3 17c3-1 4-8 6-8 2 0 0 7 2 7 1 0 3-8 5-8 2 0 0 7 2 7 1 0 2-1 3-2M4 21h16"/>',
+    'photo-background-remover': '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m4 18 5-4 3 2 3-5 5 7"/>',
+    'passport-photo-maker': '<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M9 17c.8-2 2-3 3-3s2.2 1 3 3"/>',
+    'image-to-kb': '<path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/><path d="M4 7h5m-5 3h3m10-3h3m-3 3h3"/>',
+    'photo-signature-combiner': '<rect x="3" y="4" width="8" height="16" rx="1"/><circle cx="7" cy="9" r="2"/><path d="m4 17 3-3 3 3M14 15c2-4 2-4 3-3s-1 4 0 4 2-2 4-3M14 20h7"/>'
   };
 
   function icon(id) {
@@ -150,10 +156,10 @@
     app.innerHTML = `
       <section class="hero">
         <div class="hero-copy">
-          <span class="hero-badge"><span class="badge-dot"></span> YOUR EVERYDAY PDF TOOLKIT</span>
+          <span class="hero-badge"><span class="badge-dot"></span> YOUR EVERYDAY DOCUMENT TOOLKIT</span>
           <h1>All your documents.<br><span>Work made simpler.</span></h1>
           <p>Simple tools to merge, convert, compress and edit your documents. Choose a tool and get it done in a few clicks.</p>
-          <label class="tool-search"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="tool-search" type="search" placeholder="Search PDF tools..." autocomplete="off" aria-label="Search PDF tools"><kbd>/</kbd></label>
+          <label class="tool-search"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="tool-search" type="search" placeholder="Search all tools..." autocomplete="off" aria-label="Search all tools"><kbd>/</kbd></label>
           <div class="hero-trust"><span><b>&#10003;</b> Fast and easy</span><span><b>&#10003;</b> Files auto-deleted</span><span><b>&#10003;</b> No account needed</span></div>
         </div>
 
@@ -206,6 +212,7 @@
         <a class="back" href="#/">All tools</a>
         <h1>${esc(tool.title)}</h1>
         <p class="lede">${esc(tool.blurb)}</p>
+        ${tool.id === 'photo-signature-combiner' ? '<p class="tool-instructions"><b>Upload order:</b> choose the photo first, then the signature. Both are combined into one JPG.</p>' : ''}
         <div class="workspace">
           <div class="left">
             <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose files">

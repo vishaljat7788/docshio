@@ -10,6 +10,7 @@
   const groups = [
     { id: 'organize', label: 'Organize' },
     { id: 'optimize', label: 'Optimize' },
+    { id: 'photos', label: 'Photo tools' },
     { id: 'convert-to', label: 'Convert to PDF' },
     { id: 'convert-from', label: 'Convert from PDF' },
     { id: 'edit', label: 'Edit' }
@@ -183,7 +184,33 @@
     { id: 'edit-pdf', title: 'Edit PDF', group: 'edit', kind: 'pdf', accept: '.pdf,application/pdf', blurb: 'Add a text annotation to every page of a PDF.', action: 'Add text', options: [{ key: 'text', label: 'Text to add', type: 'text', value: 'Your note', maxLength: 100 }] },
     { id: 'sign-pdf', title: 'Sign PDF', group: 'edit', kind: 'pdf', accept: '.pdf,application/pdf', blurb: 'Add a typed signature to every page. This is not a digital certificate signature.', action: 'Add signature', options: [{ key: 'text', label: 'Signature', type: 'text', value: 'Your Name', maxLength: 60 }] },
     { id: 'protect-pdf', title: 'Protect PDF', group: 'edit', kind: 'pdf', accept: '.pdf,application/pdf', blurb: 'Encrypt a PDF with a password using qpdf.', action: 'Protect PDF', options: [{ key: 'password', label: 'Password', type: 'password', value: '', maxLength: 100 }] },
-    { id: 'unlock-pdf', title: 'Unlock PDF', group: 'edit', kind: 'pdf', accept: '.pdf,application/pdf', blurb: 'Remove a password from a PDF you are authorized to access using qpdf.', action: 'Unlock PDF', options: [{ key: 'password', label: 'Current password', type: 'password', value: '', maxLength: 100 }] }
+    { id: 'unlock-pdf', title: 'Unlock PDF', group: 'edit', kind: 'pdf', accept: '.pdf,application/pdf', blurb: 'Remove a password from a PDF you are authorized to access using qpdf.', action: 'Unlock PDF', options: [{ key: 'password', label: 'Current password', type: 'password', value: '', maxLength: 100 }] },
+    { id: 'photo-resizer', title: 'Photo Resizer', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Resize a photo to the exact pixel dimensions you need.', action: 'Resize photo', options: [
+      { key: 'width', label: 'Width (pixels)', type: 'number', value: 800, min: 1, max: 5000 },
+      { key: 'height', label: 'Height (pixels)', type: 'number', value: 800, min: 1, max: 5000 },
+      { key: 'fit', label: 'Fit', type: 'select', value: 'cover', choices: [['cover', 'Crop to fill'], ['contain', 'Fit inside with padding'], ['fill', 'Stretch to exact size']] },
+      { key: 'format', label: 'Output format', type: 'select', value: 'jpeg', choices: [['jpeg', 'JPG'], ['png', 'PNG'], ['webp', 'WebP']] }
+    ] },
+    { id: 'signature-resizer', title: 'Signature Resizer', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Resize a scanned signature and keep its transparent background when available.', action: 'Resize signature', options: [
+      { key: 'width', label: 'Width (pixels)', type: 'number', value: 400, min: 1, max: 3000 },
+      { key: 'height', label: 'Height (pixels)', type: 'number', value: 150, min: 1, max: 3000 },
+      { key: 'format', label: 'Output format', type: 'select', value: 'png', choices: [['png', 'PNG (transparent)'], ['jpeg', 'JPG'], ['webp', 'WebP']] }
+    ] },
+    { id: 'photo-background-remover', title: 'Photo Background Remover', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Make a plain, evenly colored photo background transparent.', action: 'Remove background', options: [
+      { key: 'background', label: 'Background color', type: 'select', value: 'auto', choices: [['auto', 'Detect from image corners'], ['white', 'White'], ['black', 'Black'], ['blue', 'Light blue']] },
+      { key: 'sensitivity', label: 'Removal strength', type: 'number', value: 28, min: 5, max: 80, hint: 'Works best on plain backgrounds; higher values remove more color.' }
+    ] },
+    { id: 'passport-photo-maker', title: 'Passport Photo Maker', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Crop a portrait to a common passport photo size with a clean white background.', action: 'Make passport photo', options: [
+      { key: 'size', label: 'Photo size', type: 'select', value: '35x45', choices: [['35x45', '35 × 45 mm (413 × 531 px)'], ['2x2', '2 × 2 in (600 × 600 px)'], ['custom', 'Custom pixels']] },
+      { key: 'width', label: 'Width (pixels)', type: 'number', value: 413, min: 100, max: 1200, showIf: o => o.size === 'custom' },
+      { key: 'height', label: 'Height (pixels)', type: 'number', value: 531, min: 100, max: 1600, showIf: o => o.size === 'custom' }
+    ] },
+    { id: 'image-to-kb', title: 'Image to 20KB / 50KB', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Compress a photo to a 20 KB or 50 KB maximum JPG file size.', action: 'Compress image', options: [
+      { key: 'target', label: 'Maximum file size', type: 'select', value: '50', choices: [['20', '20 KB'], ['50', '50 KB']] }
+    ] },
+    { id: 'photo-signature-combiner', title: 'Photo & Signature Combiner', group: 'photos', kind: 'image', multiple: true, min: 2, accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Place a portrait photo beside your signature on one white image.', action: 'Combine photo & signature', options: [
+      { key: 'width', label: 'Canvas width (pixels)', type: 'select', value: '900', choices: [['600', '600 px'], ['900', '900 px'], ['1200', '1200 px']] }
+    ] }
   ];
 
   return { groups, tools };
