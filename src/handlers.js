@@ -6,6 +6,7 @@
  */
 const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { pathToFileURL } = require('url');
