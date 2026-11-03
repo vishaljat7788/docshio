@@ -366,6 +366,7 @@ main { max-width: 1500px; padding: 30px 28px 76px; }
 .menu-glyph.green { color: #559b62; background: #e8f5e9; }
 .menu-glyph.purple { color: #7658a6; background: #f0eafa; }
 .menu-glyph.pink { color: #b65389; background: #f8eaf2; }
+.menu-glyph.violet { color: #7753ba; background: #f0eaff; }
 .menu-glyph.neutral { color: #666b78; background: #eff0f4; }
 .bar-note { display: inline-flex; align-items: center; gap: 9px; padding: 7px 11px; border: 1px solid #edf0eb; border-radius: 12px; background: #fbfdf9; white-space: nowrap; }
 .bar-note-item { display: inline-flex; align-items: center; gap: 6px; }
