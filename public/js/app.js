@@ -331,7 +331,7 @@
         [state.files[i + 1], state.files[i]] = [state.files[i], state.files[i + 1]];
       }
       clearResults();
-      renderFiles();
+      renderFiles(); 
     });
 
     /* ---- options */
