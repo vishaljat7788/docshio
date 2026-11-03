@@ -45,6 +45,14 @@
   }
 
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      siteNav.querySelectorAll('details[open]').forEach(menu => { menu.open = false; });
+      if (siteNav.classList.contains('open')) {
+        siteNav.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+        navToggle.setAttribute('aria-label', 'Open navigation');
+      }
+    }
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     const search = document.getElementById('tool-search');
     if (search) { e.preventDefault(); search.focus(); }
