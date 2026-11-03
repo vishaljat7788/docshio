@@ -662,6 +662,18 @@ body {
   .nav-toggle span { background: #44434b; }
 }
 
+/* Keep the wide tools panel centered in the viewport, not beside its trigger. */
+@media (min-width: 761px) {
+  .bar .mega-tools { position: static; }
+  .bar .mega-tools .mega-popover {
+    top: calc(100% + 4px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(1400px, calc(100vw - 32px));
+  }
+}
+
 /* ---------- Restored light header and footer brand contrast */
 .bar {
   color: #33333a;
