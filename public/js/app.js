@@ -135,7 +135,7 @@
       if (!items.length) return '';
       return `
         <section class="group group-${g.id}" id="group-${g.id}">
-          <div class="group-heading"><div>${g.label}</h2></div><span class="group-count">${items.length} tools</span></div>
+          <div class="group-heading"><div><h2>${g.label}</h2></div><span class="group-count">${items.length} tools</span></div>
           <div class="tiles">
             ${items.map(t => `
               <a class="tile" href="#/${t.id}">
