@@ -2,7 +2,7 @@
 FROM node:22-bookworm-slim
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends poppler-utils qpdf ocrmypdf tesseract-ocr python3 python3-venv fonts-noto-core curl libreoffice-writer libreoffice-calc libreoffice-impress \
+ && apt-get install -y --no-install-recommends poppler-utils qpdf ocrmypdf tesseract-ocr python3 python3-opencv python3-venv fonts-noto-core curl libreoffice-writer libreoffice-calc libreoffice-impress \
  && rm -rf /var/lib/apt/lists/*
 
 # Install one offline English-to-Hindi model. Uploaded documents are translated

@@ -2,7 +2,7 @@
 
 PDF tools web app. The browser sends files to a Node.js (Express) server, the server processes them, and the result is downloaded. Uploaded files and results are deleted automatically (after 30 minutes by default).
 
-Tools include page organizing, PDF repair/cropping/redaction/comparison, form inspection, OCR and PDF/A conversion, PDF to Markdown, a local extractive summarizer, offline English-to-Hindi PDF translation, Merge, Split, Remove pages, Rotate, Images to PDF, PDF to JPG, Compress, Watermark, Page numbers, Office and HTML conversions, typed PDF annotation/signature, password protect/unlock, photo and signature resizing, passport photo sizing, 20/50 KB image compression, photo/signature combining, and plain-color photo background removal.
+Tools include page organizing, PDF repair/cropping/redaction/comparison, form inspection, OCR and PDF/A conversion, PDF to Markdown, a local extractive summarizer, offline English-to-Hindi PDF translation, Merge, Split, Remove pages, Rotate, Images to PDF, PDF to JPG, Compress, Watermark, Page numbers, Office and HTML conversions, typed PDF annotation/signature, password protect/unlock, photo and signature resizing, passport photo sizing, 20/50 KB image compression, photo/signature combining, and foreground-segmented photo background removal. The Docker API image includes OpenCV for foreground segmentation.
 
 ## Run locally
 

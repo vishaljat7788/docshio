@@ -196,9 +196,8 @@
       { key: 'height', label: 'Height (pixels)', type: 'number', value: 150, min: 1, max: 3000 },
       { key: 'format', label: 'Output format', type: 'select', value: 'png', choices: [['png', 'PNG (transparent)'], ['jpeg', 'JPG'], ['webp', 'WebP']] }
     ] },
-    { id: 'photo-background-remover', title: 'Photo Background Remover', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Make a plain, evenly colored photo background transparent.', action: 'Remove background', options: [
-      { key: 'background', label: 'Background color', type: 'select', value: 'auto', choices: [['auto', 'Detect from image corners'], ['white', 'White'], ['black', 'Black'], ['blue', 'Light blue']] },
-      { key: 'sensitivity', label: 'Removal strength', type: 'number', value: 28, min: 5, max: 80, hint: 'Works best on plain backgrounds; higher values remove more color.' }
+    { id: 'photo-background-remover', title: 'Photo Background Remover', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Separate a centered subject from its background. Works best when the full subject is visible and stands out from the background.', action: 'Remove background', options: [
+      { key: 'detail', label: 'Segmentation detail', type: 'select', value: '5', choices: [['3', 'Quick'], ['5', 'Balanced'], ['7', 'More edge detail']] }
     ] },
     { id: 'passport-photo-maker', title: 'Passport Photo Maker', group: 'photos', kind: 'image', accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp', blurb: 'Crop a portrait to a common passport photo size with a clean white background.', action: 'Make passport photo', options: [
       { key: 'size', label: 'Photo size', type: 'select', value: '35x45', choices: [['35x45', '35 × 45 mm (413 × 531 px)'], ['2x2', '2 × 2 in (600 × 600 px)'], ['custom', 'Custom pixels']] },

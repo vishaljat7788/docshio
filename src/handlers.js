@@ -681,42 +681,39 @@ handlers.set('signature-resizer', async (files, o) => {
   return [{ name: `${baseName(files[0].name)}-${w}x${h}.${photoExt(o.format)}`, data: output }];
 });
 
-async function removePlainBackground(input, background, sensitivity) {
-  const { data, info } = await input.ensureAlpha().toColourspace('srgb').raw().toBuffer({ resolveWithObject: true });
-  const at = (x, y) => {
-    const i = (y * info.width + x) * info.channels;
-    return [data[i], data[i + 1], data[i + 2]];
-  };
-  let key;
-  if (background === 'white') key = [255, 255, 255];
-  else if (background === 'black') key = [0, 0, 0];
-  else if (background === 'blue') key = [173, 216, 230];
-  else {
-    const corners = [at(0, 0), at(info.width - 1, 0), at(0, info.height - 1), at(info.width - 1, info.height - 1)];
-    key = [0, 1, 2].map(c => Math.round(corners.reduce((sum, p) => sum + p[c], 0) / corners.length));
+async function segmentPhoto(input, ctx, iterations) {
+  const meta = await input.metadata();
+  if (!meta.width || !meta.height || meta.width * meta.height > 12e6) {
+    throw new UserError('For background removal, use a photo smaller than 12 megapixels.');
   }
-  const threshold = Math.round(sensitivity * 4.4);
-  const soft = 28;
-  for (let i = 0; i < data.length; i += info.channels) {
-    const distance = Math.hypot(data[i] - key[0], data[i + 1] - key[1], data[i + 2] - key[2]);
-    if (distance <= threshold) data[i + 3] = 0;
-    else if (distance < threshold + soft) data[i + 3] = Math.min(data[i + 3], Math.round((distance - threshold) / soft * 255));
+  const { data: normalized, info } = await input.removeAlpha().png().toBuffer({ resolveWithObject: true });
+  const sourcePath = path.join(ctx.scratch, `segment-${crypto.randomBytes(6).toString('hex')}.jpg`);
+  const maskPath = path.join(ctx.scratch, `mask-${crypto.randomBytes(6).toString('hex')}.png`);
+  await sharp(normalized).resize(1400, 1400, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 88 }).toFile(sourcePath);
+  try {
+    await runBinary('python3', [path.join(__dirname, 'remove-background.py'), sourcePath, maskPath, String(iterations)], 'Background removal is unavailable because OpenCV is not installed on this server. Deploy the latest Docker image.');
+  } catch (err) {
+    if (err instanceof UserError) throw err;
+    console.error('Background segmentation failed:', String(err.stderr || err.message).slice(0, 400));
+    throw new UserError('Could not separate the foreground from this photo. Try a clear, centered image with the full subject inside the frame.');
   }
-  return sharp(data, { raw: info }).png({ compressionLevel: 9 }).toBuffer();
+  const mask = await sharp(maskPath).resize(info.width, info.height, { fit: 'fill' }).png().toBuffer();
+  return { normalized, mask };
 }
 
-handlers.set('photo-background-remover', async (files, o) => {
+handlers.set('photo-background-remover', async (files, o, ctx) => {
   const input = await photoInput(files[0]);
-  const output = await removePlainBackground(input, o.background, o.sensitivity);
-  return [{ name: `${baseName(files[0].name)}-transparent.png`, data: output, note: 'Removes a plain background color. Detailed or uneven backgrounds may need an AI background-removal service.' }];
+  const { normalized, mask } = await segmentPhoto(input, ctx, Number(o.detail));
+  const output = await sharp(normalized).joinChannel(mask).png({ compressionLevel: 8 }).toBuffer();
+  return [{ name: `${baseName(files[0].name)}-transparent.png`, data: output, note: 'The subject was separated with foreground segmentation. Results can vary with the framing and contrast of the photo.' }];
 });
 
-handlers.set('passport-photo-maker', async (files, o) => {
+handlers.set('passport-photo-maker', async (files, o, ctx) => {
   const dimensions = o.size === '2x2' ? [600, 600] : o.size === 'custom' ? [Math.round(o.width), Math.round(o.height)] : [413, 531];
   const [w, h] = dimensions;
   const input = await photoInput(files[0]);
-  const transparent = await removePlainBackground(input, 'auto', 23);
-  const data = await sharp(transparent).resize(w, h, { fit: 'cover', position: 'attention', background: '#ffffff' }).flatten({ background: '#ffffff' }).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
+  const { normalized, mask } = await segmentPhoto(input, ctx, 5);
+  const data = await sharp(normalized).joinChannel(mask).resize(w, h, { fit: 'cover', position: 'attention', background: '#ffffff' }).flatten({ background: '#ffffff' }).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
   return [{ name: `${baseName(files[0].name)}-passport-${w}x${h}.jpg`, data, note: 'The image is center-cropped to the selected dimensions; verify your destination authority’s photo rules before submitting.' }];
 });
 
