@@ -1,8 +1,8 @@
-﻿'use strict';
+'use strict';
 /* End-to-end smoke test. Starts the server on a random port and exercises every tool. */
 process.env.PORT = '0';
 process.env.MAX_FILE_MB = '8';
-process.env.DATA_DIR = require('path').join(require('os').tmpdir(), 'docshio-test-' + process.pid);
+process.env.DATA_DIR = require('path').join(require('os').tmpdir(), 'docxmaster-test-' + process.pid);
 
 const assert = require('assert');
 const { spawnSync } = require('child_process');

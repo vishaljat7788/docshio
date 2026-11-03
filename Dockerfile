@@ -1,4 +1,4 @@
-﻿# Docshio: Node.js server plus poppler for PDF rendering
+# DocxMaster: Node.js server plus poppler for PDF rendering
 FROM node:22-bookworm-slim
 
 RUN apt-get update \
@@ -12,10 +12,10 @@ COPY . .
 
 ENV NODE_ENV=production \
     PORT=3000 \
-    DATA_DIR=/tmp/docshio
+    DATA_DIR=/tmp/docxmaster
 
 # Run as the unprivileged "node" user that ships with the image
-RUN mkdir -p /tmp/docshio && chown -R node:node /tmp/docshio /app
+RUN mkdir -p /tmp/docxmaster && chown -R node:node /tmp/docxmaster /app
 USER node
 
 EXPOSE 3000

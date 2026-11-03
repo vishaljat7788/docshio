@@ -21,8 +21,8 @@ self.onmessage = async event => {
   const { id, mode, bytes, password } = event.data;
   try {
     const qpdf = await getQpdf();
-    const inputPath = `/docshio-${id}-input.pdf`;
-    const outputPath = `/docshio-${id}-output.pdf`;
+    const inputPath = `/docxmaster-${id}-input.pdf`;
+    const outputPath = `/docxmaster-${id}-output.pdf`;
     qpdf.FS.writeFile(inputPath, new Uint8Array(bytes));
 
     const args = mode === 'protect'

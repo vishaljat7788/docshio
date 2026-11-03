@@ -1,4 +1,4 @@
-﻿# Docshio (Node.js version)
+# DocxMaster (Node.js version)
 
 PDF tools web app. The browser sends files to a Node.js (Express) server, the server processes them, and the result is downloaded. Uploaded files and results are deleted automatically (after 30 minutes by default).
 
@@ -23,8 +23,8 @@ Office and HTML conversions require LibreOffice. The website protects and unlock
 
 ## Run with Docker (easiest, includes everything)
 ```
-docker build -t docshio .
-docker run -p 3000:3000 docshio
+docker build -t docxmaster .
+docker run -p 3000:3000 docxmaster
 ```
 
 ## Deploy the website on Vercel
@@ -33,8 +33,8 @@ Vercel hosts the static website; the document-processing API needs to run as a D
 
 1. Build and deploy this repository's Dockerfile to a container host that supports Docker. The image includes Poppler, LibreOffice Writer/Calc/Impress and qpdf. Keep one API instance unless its upload/result files are moved to shared storage; a download request must reach the instance that processed the file.
 2. Set `TOOL_TIMEOUT_SECONDS=100` on the API service so long conversions finish within Vercel's external proxy timeout. Set `TRUST_PROXY=true` if the API host is behind its trusted reverse proxy.
-3. In `vercel.json`, replace both `https://docshio-api.example.com` destinations with the deployed API's HTTPS origin (no trailing slash).
-4. Import the repository into Vercel and deploy. The build copies the shared tool registry into `public/shared` and publishes `public` as the static output directory. `/api/*` and `/healthz` are proxied to the Docker API, so browser uploads and download links stay on the Docshio domain.
+3. In `vercel.json`, replace both `https://docxmaster-api.example.com` destinations with the deployed API's HTTPS origin (no trailing slash).
+4. Import the repository into Vercel and deploy. The build copies the shared tool registry into `public/shared` and publishes `public` as the static output directory. `/api/*` and `/healthz` are proxied to the Docker API, so browser uploads and download links stay on the DocxMaster domain.
 
 The API keeps its 50 MB per-file limit. Its native PDF/Office tools are installed in the Docker image, while Vercel only serves the site and proxies requests. PDF-to-JPG, Protect PDF and Unlock PDF run in the browser; the QPDF WebAssembly license is published at `/licenses/qpdf-wasm-LICENSE.txt`.
 

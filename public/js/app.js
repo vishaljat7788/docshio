@@ -1,4 +1,4 @@
-﻿/* UI: hash routing, home grid, tool screen. Files are sent to the Node server for processing. */
+/* UI: hash routing, home grid, tool screen. Files are sent to the Node server for processing. */
 (function () {
   const U = window.Utils;
   const TOOLS = window.TOOL_META.tools;

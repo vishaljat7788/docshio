@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -21,7 +21,7 @@ const MAX_FILE_MB = parseInt(process.env.MAX_FILE_MB || '50', 10);
 const MAX_FILES = 20;
 const JOB_TTL_MS = parseInt(process.env.JOB_TTL_MINUTES || '30', 10) * 60 * 1000;
 const RATE_LIMIT_PER_10_MIN = parseInt(process.env.RATE_LIMIT || '60', 10);
-const DATA_DIR = process.env.DATA_DIR || path.join(os.tmpdir(), 'docshio');
+const DATA_DIR = process.env.DATA_DIR || path.join(os.tmpdir(), 'docxmaster');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const JOB_DIR = path.join(DATA_DIR, 'jobs');
 
@@ -221,7 +221,7 @@ async function start() {
   }, 5 * 60 * 1000).unref();
 
   return app.listen(PORT, () => {
-    console.log(`Docshio is running at http://localhost:${PORT}`);
+    console.log(`DocxMaster is running at http://localhost:${PORT}`);
   });
 }
 
