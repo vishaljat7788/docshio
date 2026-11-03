@@ -15,16 +15,54 @@
     </a>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
     <nav class="site-nav" id="site-nav" aria-label="Main navigation">
-      <a class="nav-link" href="#/pdf-to-word">PDF to Word</a>
-      <a class="nav-link" href="#/pdf-to-powerpoint">PDF to PowerPoint</a>
-      <a class="nav-link" href="#/pdf-to-excel">PDF to Excel</a>
       <details class="nav-dropdown">
-        <summary>Convert PDF <span class="chevron" aria-hidden="true"></span></summary>
+        <summary>Organize <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover">
+          <a href="#/merge"><span class="menu-glyph coral">M</span><span><b>Merge PDF</b><small>Combine PDF files</small></span></a>
+          <a href="#/split"><span class="menu-glyph coral">S</span><span><b>Split PDF</b><small>Separate pages or ranges</small></span></a>
+          <a href="#/remove"><span class="menu-glyph coral">−</span><span><b>Remove pages</b><small>Delete selected pages</small></span></a>
+          <a href="#/organize-pdf"><span class="menu-glyph coral">O</span><span><b>Organize PDF</b><small>Reorder document pages</small></span></a>
+          <a href="#/compare-pdf"><span class="menu-glyph coral">C</span><span><b>Compare PDF</b><small>Compare two documents</small></span></a>
+        </div>
+      </details>
+      <details class="nav-dropdown">
+        <summary>Optimize <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover">
+          <a href="#/compress"><span class="menu-glyph green">C</span><span><b>Compress PDF</b><small>Reduce PDF file size</small></span></a>
+          <a href="#/repair-pdf"><span class="menu-glyph green">R</span><span><b>Repair PDF</b><small>Repair damaged files</small></span></a>
+          <a href="#/ocr-pdf"><span class="menu-glyph green">OCR</span><span><b>OCR PDF</b><small>Make scanned text searchable</small></span></a>
+        </div>
+      </details>
+      <details class="nav-dropdown">
+        <summary>Convert to PDF <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover">
+          <a href="#/jpg-to-pdf"><span class="menu-glyph yellow">JPG</span><span><b>JPG to PDF</b><small>Turn images into a PDF</small></span></a>
+          <a href="#/word-to-pdf"><span class="menu-glyph blue">W</span><span><b>Word to PDF</b><small>Convert Word documents</small></span></a>
+          <a href="#/powerpoint-to-pdf"><span class="menu-glyph orange">P</span><span><b>PowerPoint to PDF</b><small>Convert presentations</small></span></a>
+          <a href="#/excel-to-pdf"><span class="menu-glyph green">X</span><span><b>Excel to PDF</b><small>Convert spreadsheets</small></span></a>
+          <a href="#/html-to-pdf"><span class="menu-glyph yellow">H</span><span><b>HTML to PDF</b><small>Convert an HTML file</small></span></a>
+        </div>
+      </details>
+      <details class="nav-dropdown">
+        <summary>Convert from PDF <span class="chevron" aria-hidden="true"></span></summary>
         <div class="nav-popover">
           <a href="#/pdf-to-word"><span class="menu-glyph blue">W</span><span><b>PDF to Word</b><small>Make PDFs editable</small></span></a>
+          <a href="#/pdf-to-powerpoint"><span class="menu-glyph orange">P</span><span><b>PDF to PowerPoint</b><small>Convert pages to slides</small></span></a>
+          <a href="#/pdf-to-excel"><span class="menu-glyph green">X</span><span><b>PDF to Excel</b><small>Extract PDF tables</small></span></a>
           <a href="#/pdf-to-jpg"><span class="menu-glyph yellow">JPG</span><span><b>PDF to JPG</b><small>Save pages as images</small></span></a>
-          <a href="#/word-to-pdf"><span class="menu-glyph red">PDF</span><span><b>Word to PDF</b><small>Share documents easily</small></span></a>
-          <a href="#/jpg-to-pdf"><span class="menu-glyph green">IMG</span><span><b>Images to PDF</b><small>Combine images in a PDF</small></span></a>
+          <a href="#/pdf-to-pdfa"><span class="menu-glyph blue">A</span><span><b>PDF to PDF/A</b><small>Archive-ready PDF</small></span></a>
+          <a href="#/pdf-to-markdown"><span class="menu-glyph violet">MD</span><span><b>PDF to Markdown</b><small>Extract PDF text</small></span></a>
+        </div>
+      </details>
+      <details class="nav-dropdown">
+        <summary>Edit <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover">
+          <a href="#/rotate"><span class="menu-glyph purple">R</span><span><b>Rotate PDF</b><small>Rotate selected pages</small></span></a>
+          <a href="#/page-numbers"><span class="menu-glyph pink">#</span><span><b>Page numbers</b><small>Number every page</small></span></a>
+          <a href="#/watermark"><span class="menu-glyph pink">W</span><span><b>Add watermark</b><small>Stamp text on pages</small></span></a>
+          <a href="#/crop-pdf"><span class="menu-glyph pink">C</span><span><b>Crop PDF</b><small>Trim page margins</small></span></a>
+          <a href="#/edit-pdf"><span class="menu-glyph pink">E</span><span><b>Edit PDF</b><small>Add text to pages</small></span></a>
+          <a href="#/pdf-forms"><span class="menu-glyph pink">F</span><span><b>PDF Forms</b><small>Inspect form fields</small></span></a>
         </div>
       </details>
       <details class="nav-dropdown photo-tools-menu">
@@ -39,7 +77,7 @@
         </div>
       </details>
       <details class="nav-dropdown all-tools-menu mega-tools">
-        <summary>All tools <span class="chevron" aria-hidden="true"></span></summary>
+        <summary>All Tools <span class="chevron" aria-hidden="true"></span></summary>
         <div class="nav-popover nav-popover-wide mega-popover">
           <section class="mega-group"><h2>ORGANIZE PDF</h2>
             <a href="#/merge"><span class="mega-icon coral">↗</span>Merge PDF</a><a href="#/split"><span class="mega-icon coral">↘</span>Split PDF</a><a href="#/remove"><span class="mega-icon coral">×</span>Remove pages</a><a href="#/split"><span class="mega-icon coral">⇥</span>Extract pages</a><a href="#/organize-pdf"><span class="mega-icon coral">▤</span>Organize PDF</a><a href="#/jpg-to-pdf"><span class="mega-icon coral">▧</span>Scan to PDF</a>

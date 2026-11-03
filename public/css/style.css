@@ -364,6 +364,8 @@ main { max-width: 1500px; padding: 30px 28px 76px; }
 .menu-glyph.yellow { color: #ad9410; background: #faf4d5; }
 .menu-glyph.red { color: #e75d50; background: #ffebe8; }
 .menu-glyph.green { color: #559b62; background: #e8f5e9; }
+.menu-glyph.coral { color: #e75d50; background: #ffebe8; }
+.menu-glyph.orange { color: #df6948; background: #fff0e9; }
 .menu-glyph.purple { color: #7658a6; background: #f0eafa; }
 .menu-glyph.pink { color: #b65389; background: #f8eaf2; }
 .menu-glyph.violet { color: #7753ba; background: #f0eaff; }
@@ -665,6 +667,12 @@ body {
   .nav-link.current { color: #d72f2a; }
   .nav-toggle { border-color: #e0dfe7; background: #fff; }
   .nav-toggle span { background: #44434b; }
+}
+@media (min-width: 761px) and (max-width: 1120px) {
+  .bar { grid-template-columns: 150px minmax(0,1fr); gap: 12px; padding-inline: 18px; }
+  .site-nav { justify-self: end; gap: 0; }
+  .nav-link, .nav-dropdown summary { padding-inline: 6px; font-size: .59rem; }
+  .bar-note { display: none; }
 }
 
 /* Keep the wide tools panel centered in the viewport, not beside its trigger. */
