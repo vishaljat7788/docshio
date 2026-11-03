@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docshio – free online PDF tools</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="#/" aria-label="Docshio home">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><rect x="2" y="2" width="36" height="36" rx="12" fill="#ed5d52"/><text x="20" y="29" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#fff">D</text></svg>
+      <span class="brand-copy"><span class="brand-name"><span>Doc</span><span class="brand-name-accent">shio</span></span><small>PDF, made simple</small></span>
+    </a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+      <a class="nav-link" href="#/merge">Merge PDF</a>
+      <a class="nav-link" href="#/split">Split PDF</a>
+      <a class="nav-link" href="#/compress">Compress PDF</a>
+      <details class="nav-dropdown">
+        <summary>Convert PDF <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover">
+          <a href="#/pdf-to-word"><span class="menu-glyph blue">W</span><span><b>PDF to Word</b><small>Make PDFs editable</small></span></a>
+          <a href="#/pdf-to-jpg"><span class="menu-glyph yellow">JPG</span><span><b>PDF to JPG</b><small>Save pages as images</small></span></a>
+          <a href="#/word-to-pdf"><span class="menu-glyph red">PDF</span><span><b>Word to PDF</b><small>Share documents easily</small></span></a>
+          <a href="#/jpg-to-pdf"><span class="menu-glyph green">IMG</span><span><b>Images to PDF</b><small>Combine images in a PDF</small></span></a>
+        </div>
+      </details>
+      <details class="nav-dropdown all-tools-menu mega-tools">
+        <summary>All PDF tools <span class="chevron" aria-hidden="true"></span></summary>
+        <div class="nav-popover nav-popover-wide mega-popover">
+          <section class="mega-group"><h2>ORGANIZE PDF</h2>
+            <a href="#/merge"><span class="mega-icon coral">↗</span>Merge PDF</a><a href="#/split"><span class="mega-icon coral">↘</span>Split PDF</a><a href="#/remove"><span class="mega-icon coral">×</span>Remove pages</a><a href="#/split"><span class="mega-icon coral">⇥</span>Extract pages</a><span class="mega-item soon"><span class="mega-icon coral">▤</span>Organize PDF <small>SOON</small></span><a href="#/jpg-to-pdf"><span class="mega-icon coral">▧</span>Scan to PDF</a>
+          </section>
+          <section class="mega-group"><h2>OPTIMIZE PDF</h2>
+            <a href="#/compress"><span class="mega-icon green">⇣</span>Compress PDF</a><span class="mega-item soon"><span class="mega-icon green">✓</span>Repair PDF <small>SOON</small></span><span class="mega-item soon"><span class="mega-icon green">OCR</span>OCR PDF <small>SOON</small></span>
+          </section>
+          <section class="mega-group"><h2>CONVERT TO PDF</h2>
+            <a href="#/jpg-to-pdf"><span class="mega-icon yellow">J</span>JPG to PDF</a><a href="#/word-to-pdf"><span class="mega-icon blue">W</span>Word to PDF</a><a href="#/powerpoint-to-pdf"><span class="mega-icon orange">P</span>PowerPoint to PDF</a><a href="#/excel-to-pdf"><span class="mega-icon green">X</span>Excel to PDF</a><a href="#/html-to-pdf"><span class="mega-icon yellow">H</span>HTML to PDF</a>
+          </section>
+          <section class="mega-group"><h2>CONVERT FROM PDF</h2>
+            <a href="#/pdf-to-jpg"><span class="mega-icon yellow">J</span>PDF to JPG</a><a href="#/pdf-to-word"><span class="mega-icon blue">W</span>PDF to Word</a><a href="#/pdf-to-powerpoint"><span class="mega-icon orange">P</span>PDF to PowerPoint</a><a href="#/pdf-to-excel"><span class="mega-icon green">X</span>PDF to Excel</a><span class="mega-item soon"><span class="mega-icon blue">A</span>PDF to PDF/A <small>SOON</small></span>
+          </section>
+          <section class="mega-group"><h2>EDIT PDF</h2>
+            <a href="#/rotate"><span class="mega-icon purple">↻</span>Rotate PDF</a><a href="#/page-numbers"><span class="mega-icon pink">#</span>Add page numbers</a><a href="#/watermark"><span class="mega-icon pink">W</span>Add watermark</a><span class="mega-item soon"><span class="mega-icon pink">⌗</span>Crop PDF <small>SOON</small></span><a href="#/edit-pdf"><span class="mega-icon pink">✎</span>Edit PDF</a><span class="mega-item soon"><span class="mega-icon pink">▣</span>PDF Forms <small>SOON</small></span>
+          </section>
+          <section class="mega-group"><h2>PDF SECURITY</h2>
+            <a href="#/unlock-pdf"><span class="mega-icon blue">⌑</span>Unlock PDF</a><a href="#/protect-pdf"><span class="mega-icon blue">▣</span>Protect PDF</a><a href="#/sign-pdf"><span class="mega-icon blue">✍</span>Sign PDF</a><span class="mega-item soon"><span class="mega-icon blue">▤</span>Redact PDF <small>SOON</small></span><span class="mega-item soon"><span class="mega-icon blue">◫</span>Compare PDF <small>SOON</small></span>
+          </section>
+          <section class="mega-group"><h2>PDF INTELLIGENCE</h2>
+            <span class="mega-item soon"><span class="mega-icon violet">✦</span>AI Summarizer <small>SOON</small></span><span class="mega-item soon"><span class="mega-icon violet">文</span>Translate PDF <small>SOON</small></span><span class="mega-item soon"><span class="mega-icon violet">MD</span>PDF to Markdown <small>SOON</small></span>
+          </section>
+        </div>
+      </details>
+    </nav>
+    <span class="bar-note" aria-label="Privacy first. Files automatically deleted after 30 minutes.">
+      <span class="bar-note-item">
+        <svg class="bar-note-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.9 8.1-7 10-4.1-1.9-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <b>Privacy First</b>
+      </span>
+      <span class="bar-note-divider" aria-hidden="true"></span>
+      <span class="bar-note-item">
+        <svg class="bar-note-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2M16 3h5v5"/></svg>
+        <small>Files automatically deleted after 30 minutes</small>
+      </span>
+    </span>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <footer class="site-footer">
+    <div class="footer-main">
+      <div class="footer-brand-block">
+        <a class="brand footer-brand" href="#/" aria-label="Docshio home">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false"><rect x="2" y="2" width="36" height="36" rx="12" fill="#ed5d52"/><text x="20" y="29" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#fff">D</text></svg><span class="brand-copy"><span class="brand-name"><span>Doc</span><span class="brand-name-accent">shio</span></span><small>PDF, made simple</small></span>
+        </a>
+        <p>Simple tools for your everyday PDF tasks.</p>
+        <span class="footer-privacy"><span class="privacy-dot"></span> Files auto-delete after 30 minutes</span>
+      </div>
+      <div class="footer-column">
+        <h2>ORGANIZE</h2>
+        <a href="#/merge">Merge PDF</a><a href="#/split">Split PDF</a><a href="#/remove">Remove pages</a><a href="#/rotate">Rotate PDF</a>
+      </div>
+      <div class="footer-column">
+        <h2>CONVERT</h2>
+        <a href="#/pdf-to-word">PDF to Word</a><a href="#/pdf-to-jpg">PDF to JPG</a><a href="#/word-to-pdf">Word to PDF</a><a href="#/jpg-to-pdf">Images to PDF</a>
+      </div>
+      <div class="footer-column">
+        <h2>EDIT &amp; SECURE</h2>
+        <a href="#/watermark">Watermark</a><a href="#/page-numbers">Page numbers</a><a href="#/sign-pdf">Sign PDF</a><a href="#/protect-pdf">Protect PDF</a>
+      </div>
+      <div class="footer-column footer-column-last">
+        <h2>COMPANY</h2>
+        <a href="#/about">About us</a><a href="#/faq">FAQ</a><a href="#/contact">Contact us</a><a href="#/">All tools</a>
+      </div>
+      <div class="footer-column footer-legal">
+        <h2>LEGAL</h2>
+        <a href="#/privacy">Privacy policy</a><a href="#/terms">Terms &amp; conditions</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© Docshio · PDF tools in one simple place</span>
+      <span class="footer-bottom-note">Your files are processed securely and removed automatically.</span>
+      <a href="#/" class="footer-top">Back to top <span aria-hidden="true">↑</span></a>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+  <script src="shared/tools-meta.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

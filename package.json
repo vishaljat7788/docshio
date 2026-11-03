@@ -1,0 +1,25 @@
+{
+  "name": "docshio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PDF tools web app with a Node.js (Express) backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:vercel": "node scripts/prepare-vercel.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@neslinesli93/qpdf-wasm": "^0.3.1",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jszip": "^3.10.2",
+    "multer": "^2.5.0",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.5"
+  }
+}
