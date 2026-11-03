@@ -151,7 +151,7 @@
       <section class="hero">
         <div class="hero-copy">
           <span class="hero-badge"><span class="badge-dot"></span> YOUR EVERYDAY PDF TOOLKIT</span>
-          <h1>Everything you need to work with <span>PDFs.</span></h1>
+          <h1>All your documents.<br><span>Work made simpler.</span></h1>
           <p>Simple tools to merge, convert, compress and edit your documents. Choose a tool and get it done in a few clicks.</p>
           <label class="tool-search"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="tool-search" type="search" placeholder="Search PDF tools..." autocomplete="off" aria-label="Search PDF tools"><kbd>/</kbd></label>
           <div class="hero-trust"><span><b>&#10003;</b> Fast and easy</span><span><b>&#10003;</b> Files auto-deleted</span><span><b>&#10003;</b> No account needed</span></div>
