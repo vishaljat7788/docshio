@@ -19,7 +19,7 @@ You need Node.js 18 or newer. PDF-to-JPG runs in the browser with PDF.js; PDF te
    ```
 3. Open http://localhost:3000
 
-Office and HTML conversions require LibreOffice. The website protects and unlocks PDFs in the browser with qpdf compiled to WebAssembly; direct server API calls for those tools still require qpdf installed.
+Office and HTML conversions require LibreOffice. PDF-to-Word also uses OCRmyPDF and Tesseract to read scanned pages automatically; install them with Poppler on the API host. The website protects and unlocks PDFs in the browser with qpdf compiled to WebAssembly; direct server API calls for those tools still require qpdf installed.
 
 ## Run with Docker (easiest, includes everything)
 ```

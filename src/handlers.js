@@ -589,9 +589,23 @@ for (const id of ['pdf-to-word', 'pdf-to-powerpoint', 'pdf-to-excel', 'word-to-p
     // Multer stores uploads under random extensionless names. Office import
     // filters rely on a recognizable filename extension, so stage a safe copy.
     const inputName = `${baseName(files[0].name)}${ext}`;
-    const inputPath = path.join(ctx.scratch, inputName);
+    let inputPath = path.join(ctx.scratch, inputName);
     await fs.copyFile(files[0].path, inputPath);
     try {
+      // LibreOffice imports selectable PDF text, but scanned pages often become
+      // blank. OCR only pages without text before importing; --skip-text keeps
+      // existing text layers intact while making scanned pages searchable.
+      if (id === 'pdf-to-word') {
+        const ocrPath = path.join(ctx.scratch, `${baseName(files[0].name)}-ocr.pdf`);
+        try {
+          await runBinary('ocrmypdf', ['--skip-text', '--output-type', 'pdf', inputPath, ocrPath], 'Scanned PDF to Word conversion needs OCRmyPDF and Tesseract installed on the server.');
+          inputPath = ocrPath;
+        } catch (e) {
+          if (e instanceof UserError) throw e;
+          if (/encrypted|password/i.test(`${e.stderr || ''} ${e.message || ''}`)) throw new UserError('This PDF is password protected. Remove the password first.');
+          throw new UserError('OCR could not read this PDF. Check that its pages are clear and not password protected.');
+        }
+      }
       const officeCommand = process.platform === 'win32'
         ? path.join(process.env.ProgramFiles || 'C:\\Program Files', 'LibreOffice', 'program', 'soffice.com')
         : 'libreoffice';
