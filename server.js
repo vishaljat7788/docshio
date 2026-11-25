@@ -1,132 +1,232 @@
+'use strict';
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const JSZip = require('jszip');
 const crypto = require('crypto');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
 
+const META = require('./shared/tools-meta');
+const { handlers } = require('./src/handlers');
+const { sanitizeOptions } = require('./src/options');
+const { UserError } = require('./src/errors');
+const { cleanName, fixEncoding } = require('./src/utils');
+
+/* ------------------------------------------------------------ config */
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const MAX_FILE_MB = parseInt(process.env.MAX_FILE_MB || '50', 10);
+const MAX_FILES = 20;
+const JOB_TTL_MS = parseInt(process.env.JOB_TTL_MINUTES || '30', 10) * 60 * 1000;
+const RATE_LIMIT_PER_10_MIN = parseInt(process.env.RATE_LIMIT || '60', 10);
+const DATA_DIR = process.env.DATA_DIR || path.join(os.tmpdir(), 'docxmaster');
+const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
+const JOB_DIR = path.join(DATA_DIR, 'jobs');
+
+const toolById = new Map(META.tools.map(t => [t.id, t]));
+
+/* ------------------------------------------------------------ app */
 const app = express();
-const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'data', 'db.json');
-const SERVICE_FEE = 0.1;
+app.disable('x-powered-by');
+if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : process.env.TRUST_PROXY);
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      workerSrc: ["'self'", 'blob:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  }
+}));
 
-const CITIES = ['Ahmedabad','Surat','Vadodara','Rajkot','Gandhinagar','Mumbai','Pune','Nashik','Delhi','Gurgaon','Noida','Jaipur','Chandigarh','Meerut','Ghaziabad','Rohtak','Bengaluru','Hyderabad','Chennai','Lucknow','Indore','Bhopal','Udaipur','Kolkata'];
+const apiLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: RATE_LIMIT_PER_10_MIN,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait a few minutes and try again.' }
+});
 
-/* ---------- tiny JSON database ---------- */
-function seed() {
-  const d = new Date(); const day = n => { const x = new Date(d); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
-  const db = { users: [{ id: 'u1', name: 'Amit Patel', email: 'demo@navonavocar.in', pass: hash('demo1234'), phone: '9000000001' }],
-    rides: [
-      ['Ahmedabad','Surat','07:30',420,3,0],['Ahmedabad','Vadodara','09:00',180,2,0],['Mumbai','Pune','06:45',350,3,1],
-      ['Gurgaon','Jaipur','08:15',450,2,1],['Delhi','Chandigarh','05:30',500,3,2],['Pune','Nashik','10:00',300,2,2],
-      ['Meerut','Ghaziabad','17:00',120,3,0],['Bengaluru','Hyderabad','21:00',900,3,3]
-    ].map((r, i) => ({ id: 'r' + (i + 1), driverId: 'u1', from: r[0], to: r[1], date: day(r[5]), time: r[2], price: r[3], seats: r[4], car: 'Maruti Swift (White)', note: 'AC on. One bag per seat.', instant: i % 2 === 0 })),
-    bookings: [], alerts: [] };
-  save(db); return db;
-}
-function load() { try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch { return seed(); } }
-function save(db) { fs.mkdirSync(path.dirname(DB_FILE), { recursive: true }); fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
-const uid = p => p + crypto.randomBytes(5).toString('hex');
+const upload = multer({
+  dest: UPLOAD_DIR, // random file names; the original name is never used as a path
+  limits: { fileSize: MAX_FILE_MB * 1024 * 1024, files: MAX_FILES, fields: 10, fieldSize: 10 * 1024, parts: MAX_FILES + 10 }
+});
 
-/* ---------- auth (scrypt + cookie sessions) ---------- */
-function hash(pw) { const s = crypto.randomBytes(8).toString('hex'); return s + ':' + crypto.scryptSync(pw, s, 32).toString('hex'); }
-function verify(pw, h) { const [s, k] = h.split(':'); return crypto.timingSafeEqual(Buffer.from(k, 'hex'), crypto.scryptSync(pw, s, 32)); }
-const sessions = new Map();
-app.use((req, res, next) => {
-  const c = Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map(x => x.trim().split('=')));
-  req.db = load(); req.user = req.db.users.find(u => u.id === sessions.get(c.sid)) || null;
-  res.locals.user = req.user; res.locals.cities = CITIES; res.locals.today = new Date().toISOString().slice(0, 10);
-  res.locals.fee = SERVICE_FEE; res.locals.v = {}; res.locals.q = {}; res.locals.error = null; res.locals.path = req.path;
+/* ------------------------------------------------------------ static files */
+app.use('/shared', express.static(path.join(__dirname, 'shared'), { maxAge: '1h' }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
+
+/* ------------------------------------------------------------ run a tool */
+function findTool(req, res, next) {
+  const tool = toolById.get(String(req.params.id));
+  if (!tool || !handlers.has(tool.id)) return res.status(404).json({ error: 'Unknown tool.' });
+  req.tool = tool;
   next();
-});
-const need = (req, res, next) => req.user ? next() : res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
-const withSeatsLeft = (db, r) => ({ ...r, left: r.seats - db.bookings.filter(b => b.rideId === r.id && b.status === 'confirmed').reduce((a, b) => a + b.seats, 0), driver: db.users.find(u => u.id === r.driverId) });
+}
 
-/* ---------- pages ---------- */
-app.get('/', (req, res) => {
-  const routes = [...new Map(req.db.rides.map(r => [r.from + r.to, r])).values()].slice(0, 6);
-  res.render('home', { routes });
-});
+async function looksLikePdf(file) {
+  const fh = await fs.open(file.path, 'r');
+  try {
+    const { buffer, bytesRead } = await fh.read(Buffer.alloc(1024), 0, 1024, 0);
+    return buffer.subarray(0, bytesRead).includes('%PDF-');
+  } finally {
+    await fh.close();
+  }
+}
 
-app.get('/search', (req, res) => {
-  const { from = '', to = '', date = '', seats = 1 } = req.query;
-  const has = (a, b) => !b || a.toLowerCase().includes(b.trim().toLowerCase());
-  const rides = req.db.rides.map(r => withSeatsLeft(req.db, r))
-    .filter(r => has(r.from, from) && has(r.to, to) && (!date || r.date === date) && r.left >= Number(seats) && r.date >= res.locals.today)
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  res.render('search', { rides, q: { from, to, date, seats } });
-});
+async function saveJob(toolId, results) {
+  const token = crypto.randomBytes(16).toString('hex');
+  const dir = path.join(JOB_DIR, token);
+  await fs.mkdir(dir, { recursive: true });
+  const files = [];
+  for (const [i, r] of results.entries()) {
+    await fs.writeFile(path.join(dir, `${i}.bin`), r.data);
+    files.push({ name: cleanName(r.name), size: r.data.length, note: r.note });
+  }
+  await fs.writeFile(path.join(dir, 'meta.json'), JSON.stringify({ tool: toolId, files }));
+  return { token, files, expiresInMinutes: Math.round(JOB_TTL_MS / 60000) };
+}
 
-app.get('/ride/:id', (req, res) => {
-  const r = req.db.rides.find(x => x.id === req.params.id); if (!r) return res.status(404).render('message', { title: 'Ride not found', text: 'This ride has been removed or does not exist.' });
-  res.render('ride', { ride: withSeatsLeft(req.db, r), error: req.query.error || null });
-});
+app.post('/api/tools/:id', apiLimiter, findTool, upload.array('files', MAX_FILES), async (req, res, next) => {
+  const tool = req.tool;
+  const uploaded = req.files || [];
+  let scratch;
+  try {
+    const files = uploaded.map(f => ({
+      path: path.resolve(f.path),
+      name: cleanName(fixEncoding(f.originalname)),
+      size: f.size
+    }));
 
-app.post('/ride/:id/book', need, (req, res) => {
-  const r = req.db.rides.find(x => x.id === req.params.id); if (!r) return res.redirect('/');
-  const n = Math.max(1, Number(req.body.seats) || 1); const left = withSeatsLeft(req.db, r).left;
-  if (r.driverId === req.user.id) return res.redirect(`/ride/${r.id}?error=You can't book your own ride`);
-  if (n > left) return res.redirect(`/ride/${r.id}?error=Only ${left} seat(s) left`);
-  const total = Math.round(r.price * n * (1 + SERVICE_FEE));
-  req.db.bookings.push({ id: uid('b'), rideId: r.id, userId: req.user.id, seats: n, total, status: r.instant ? 'confirmed' : 'pending', createdAt: Date.now() });
-  save(req.db); res.redirect('/my-rides');
-});
+    if (!files.length) throw new UserError('Choose a file first.');
+    if (!tool.multiple && files.length > 1) throw new UserError('This tool works on one file at a time.');
+    if (files.length < (tool.min || 1)) throw new UserError(`Add at least ${tool.min} files.`);
 
-app.post('/booking/:id/cancel', need, (req, res) => {
-  const b = req.db.bookings.find(x => x.id === req.params.id && x.userId === req.user.id);
-  if (b) { b.status = 'cancelled'; save(req.db); } res.redirect('/my-rides');
-});
+    if (tool.kind === 'pdf') {
+      for (const f of files) {
+        if (!(await looksLikePdf(f))) throw new UserError(`"${f.name}" is not a PDF file.`);
+      }
+    }
 
-app.post('/booking/:id/:action(accept|decline)', need, (req, res) => {
-  const b = req.db.bookings.find(x => x.id === req.params.id); const r = b && req.db.rides.find(x => x.id === b.rideId);
-  if (b && r && r.driverId === req.user.id) { b.status = req.params.action === 'accept' ? 'confirmed' : 'declined'; save(req.db); } res.redirect('/my-rides');
-});
+    let rawOptions = {};
+    try { rawOptions = req.body && req.body.options ? JSON.parse(req.body.options) : {}; }
+    catch (e) { throw new UserError('Invalid options.'); }
+    const options = sanitizeOptions(tool, rawOptions);
 
-app.get('/offer', need, (req, res) => res.render('offer'));
-app.post('/offer', need, (req, res) => {
-  const { from, to, date, time, price, seats, car, note, instant } = req.body;
-  if (!from || !to || from.trim().toLowerCase() === to.trim().toLowerCase() || !date || !time || !(Number(price) > 0))
-    return res.render('offer', { error: 'Please fill in all fields correctly. Departure and destination must be different.', q: req.body });
-  const ride = { id: uid('r'), driverId: req.user.id, from: from.trim(), to: to.trim(), date, time, price: Number(price), seats: Math.min(8, Math.max(1, Number(seats) || 1)), car: car || '', note: note || '', instant: !!instant };
-  req.db.rides.push(ride);
-  req.db.alerts.filter(a => a.from.toLowerCase() === ride.from.toLowerCase() && a.to.toLowerCase() === ride.to.toLowerCase())
-    .forEach(a => console.log(`[ALERT] ${a.email}: new ride ${ride.from} -> ${ride.to}`));
-  save(req.db); res.redirect('/ride/' + ride.id);
-});
-
-app.get('/my-rides', need, (req, res) => {
-  const db = req.db;
-  const booked = db.bookings.filter(b => b.userId === req.user.id).map(b => ({ ...b, ride: withSeatsLeft(db, db.rides.find(r => r.id === b.rideId)) })).reverse();
-  const offered = db.rides.filter(r => r.driverId === req.user.id).map(r => ({ ...withSeatsLeft(db, r),
-    requests: db.bookings.filter(b => b.rideId === r.id && b.status !== 'cancelled').map(b => ({ ...b, passenger: db.users.find(u => u.id === b.userId) })) }));
-  res.render('my-rides', { booked, offered });
+    scratch = await fs.mkdtemp(path.join(UPLOAD_DIR, 'work-'));
+    const results = await handlers.get(tool.id)(files, options, { scratch });
+    res.json(await saveJob(tool.id, results));
+  } catch (err) {
+    next(err);
+  } finally {
+    await Promise.allSettled(uploaded.map(f => fs.rm(f.path, { force: true })));
+    if (scratch) await fs.rm(scratch, { recursive: true, force: true }).catch(() => {});
+  }
 });
 
-app.post('/alerts', (req, res) => {
-  const { from, to, email } = req.body;
-  if (from && to && /\S+@\S+\.\S+/.test(email || '')) { req.db.alerts.push({ id: uid('a'), from, to, email }); save(req.db); }
-  res.render('message', { title: 'Alert created', text: `We'll email ${email} as soon as a new ride is published for ${from} → ${to}.` });
+/* ------------------------------------------------------------ downloads */
+async function readJob(token) {
+  if (!/^[a-f0-9]{32}$/.test(token)) return null;
+  try {
+    const dir = path.join(JOB_DIR, token);
+    const meta = JSON.parse(await fs.readFile(path.join(dir, 'meta.json'), 'utf8'));
+    return { dir, ...meta };
+  } catch (e) {
+    return null;
+  }
+}
+
+app.get('/api/download/:token/:which', async (req, res, next) => {
+  try {
+    const job = await readJob(String(req.params.token));
+    if (!job) return res.status(404).json({ error: 'This download has expired. Please run the tool again.' });
+
+    if (req.params.which === 'zip') {
+      const zip = new JSZip();
+      const used = new Set();
+      for (const [i, f] of job.files.entries()) {
+        let name = f.name, n = 1;
+        while (used.has(name)) {
+          const dot = f.name.lastIndexOf('.');
+          name = dot > 0 ? `${f.name.slice(0, dot)}-${++n}${f.name.slice(dot)}` : `${f.name}-${++n}`;
+        }
+        used.add(name);
+        zip.file(name, await fs.readFile(path.join(job.dir, `${i}.bin`)));
+      }
+      res.attachment(`${job.tool}-files.zip`).type('application/zip');
+      return zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' }).pipe(res);
+    }
+
+    if (!/^\d{1,4}$/.test(req.params.which)) return res.status(404).json({ error: 'File not found.' });
+    const idx = parseInt(req.params.which, 10);
+    const f = job.files[idx];
+    if (!f) return res.status(404).json({ error: 'File not found.' });
+    res.download(path.join(job.dir, `${idx}.bin`), f.name, err => { if (err && !res.headersSent) next(err); });
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.get('/register', (req, res) => res.render('auth', { mode: 'register', next: req.query.next || '/' }));
-app.post('/register', (req, res) => {
-  const { name, email, phone, password } = req.body; const next = req.body.next || '/';
-  const bad = !name || !/\S+@\S+\.\S+/.test(email || '') || (password || '').length < 6 ? 'Enter your name, a valid email and a password of at least 6 characters.' : req.db.users.some(u => u.email === email.toLowerCase()) ? 'An account with this email already exists.' : null;
-  if (bad) return res.render('auth', { mode: 'register', next, error: bad, v: req.body });
-  const u = { id: uid('u'), name: name.trim(), email: email.toLowerCase(), phone: phone || '', pass: hash(password) };
-  req.db.users.push(u); save(req.db); login(res, u); res.redirect(next);
-});
-app.get('/login', (req, res) => res.render('auth', { mode: 'login', next: req.query.next || '/' }));
-app.post('/login', (req, res) => {
-  const u = req.db.users.find(x => x.email === (req.body.email || '').toLowerCase()); const next = req.body.next || '/';
-  if (!u || !verify(req.body.password || '', u.pass)) return res.render('auth', { mode: 'login', next, error: 'Incorrect email or password.', v: req.body });
-  login(res, u); res.redirect(next);
-});
-app.get('/logout', (req, res) => { res.setHeader('Set-Cookie', 'sid=; Path=/; Max-Age=0'); res.redirect('/'); });
-function login(res, u) { const t = crypto.randomBytes(24).toString('hex'); sessions.set(t, u.id); res.setHeader('Set-Cookie', `sid=${t}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`); }
+/* ------------------------------------------------------------ errors */
+app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));
 
-app.use((req, res) => res.status(404).render('message', { title: '404', text: 'This page could not be found.' }));
-app.listen(PORT, () => console.log(`NavoNavoCar is running at http://localhost:${PORT}`));
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  if (err instanceof UserError) return res.status(err.status).json({ error: err.message });
+  if (err instanceof multer.MulterError) {
+    const msg = {
+      LIMIT_FILE_SIZE: `A file is too large. The limit is ${MAX_FILE_MB} MB per file.`,
+      LIMIT_FILE_COUNT: `You can upload up to ${MAX_FILES} files at once.`,
+      LIMIT_UNEXPECTED_FILE: 'Unexpected file field.'
+    }[err.code] || 'The upload was rejected.';
+    return res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: msg });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong while processing your file.' });
+});
+
+/* ------------------------------------------------------------ cleanup */
+async function removeOld(dir, maxAgeMs) {
+  let names = [];
+  try { names = await fs.readdir(dir); } catch (e) { return; }
+  const now = Date.now();
+  for (const name of names) {
+    const p = path.join(dir, name);
+    const st = await fs.stat(p).catch(() => null);
+    if (st && now - st.mtimeMs > maxAgeMs) await fs.rm(p, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function start() {
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  await fs.mkdir(JOB_DIR, { recursive: true });
+  await removeOld(UPLOAD_DIR, 0);          // leftovers from a previous crash
+  await removeOld(JOB_DIR, JOB_TTL_MS);
+  setInterval(() => {
+    removeOld(JOB_DIR, JOB_TTL_MS);
+    removeOld(UPLOAD_DIR, 60 * 60 * 1000);
+  }, 5 * 60 * 1000).unref();
+
+  return app.listen(PORT, () => {
+    console.log(`DocxMaster is running at http://localhost:${PORT}`);
+  });
+}
+
+if (require.main === module) {
+  start().catch(err => { console.error(err); process.exit(1); });
+}
+
+module.exports = { app, start };

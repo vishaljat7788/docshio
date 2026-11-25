@@ -1,8 +1,0 @@
-<form class="searchbar" action="/search" method="get">
-  <label class="wide">From<input name="from" list="cities" placeholder="City or place" value="<%= q.from||'' %>" autocomplete="off"></label>
-  <label class="wide">To<input name="to" list="cities" placeholder="City or place" value="<%= q.to||'' %>" autocomplete="off"></label>
-  <label>Departure<input type="date" name="date" min="<%= today %>" value="<%= q.date||'' %>"></label>
-  <label>Passengers<select name="seats"><% for (let i=1;i<=6;i++){ %><option value="<%= i %>" <%= Number(q.seats)===i?'selected':'' %>><%= i %> passenger<%= i>1?'s':'' %></option><% } %></select></label>
-  <button class="btn">Search</button>
-  <datalist id="cities"><% cities.forEach(c=>{ %><option value="<%= c %>"><% }) %></datalist>
-</form>
