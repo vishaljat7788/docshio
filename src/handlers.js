@@ -596,7 +596,11 @@ for (const id of ['pdf-to-word', 'pdf-to-powerpoint', 'pdf-to-excel', 'word-to-p
       // blank. OCR only pages without text before importing; --skip-text keeps
       // existing text layers intact while making scanned pages searchable.
       if (id === 'pdf-to-word') {
-        const ocrPath = path.join(ctx.scratch, `${baseName(files[0].name)}-ocr.pdf`);
+        // Keep the original basename: LibreOffice uses the input basename for
+        // its DOCX output, which is also the name returned below.
+        const ocrDir = path.join(ctx.scratch, 'ocr');
+        await fs.mkdir(ocrDir, { recursive: true });
+        const ocrPath = path.join(ocrDir, inputName);
         try {
           await runBinary('ocrmypdf', ['--skip-text', '--output-type', 'pdf', inputPath, ocrPath], 'Scanned PDF to Word conversion needs OCRmyPDF and Tesseract installed on the server.');
           inputPath = ocrPath;

@@ -32,7 +32,7 @@ docker run -p 3000:3000 docxmaster
 Vercel hosts the static website; the document-processing API needs to run as a Docker service. The API uses Poppler, LibreOffice and qpdf, writes temporary uploads/results to disk, and serves download links from that same disk. A Vercel Function is not a drop-in replacement for this backend: function requests/responses have a 4.5 MB payload limit and Vercel's external proxy has a 120-second request timeout.
 
 1. Build and deploy this repository's Dockerfile to a container host that supports Docker. The image includes Poppler, LibreOffice Writer/Calc/Impress and qpdf. Keep one API instance unless its upload/result files are moved to shared storage; a download request must reach the instance that processed the file.
-2. Set `TOOL_TIMEOUT_SECONDS=100` on the API service so long conversions finish within Vercel's external proxy timeout. Set `TRUST_PROXY=true` if the API host is behind its trusted reverse proxy.
+2. Set `TOOL_TIMEOUT_SECONDS=100` and `TRUST_PROXY=true` on the API service. The API sits behind Render's and Vercel's proxies; trusting the proxy lets Express rate-limit each visitor by their real IP instead of counting every visitor as one shared proxy IP. The default is 300 tool requests per IP per 10 minutes; adjust `RATE_LIMIT` in the hosting dashboard if your usage needs a different cap.
 3. In `vercel.json`, replace both `https://docxmaster-api.example.com` destinations with the deployed API's HTTPS origin (no trailing slash).
 4. Import the repository into Vercel and deploy. The build copies the shared tool registry into `public/shared` and publishes `public` as the static output directory. `/api/*` and `/healthz` are proxied to the Docker API, so browser uploads and download links stay on the DocxMaster domain.
 
@@ -42,7 +42,7 @@ The API keeps its 50 MB per-file limit. Its native PDF/Office tools are installe
 `npm test` starts the server on a random port and runs the available end-to-end and security checks. The server API's PDF-to-JPG check is skipped when Poppler is not installed; the website converts PDF pages to JPG in the browser.
 
 ## Settings (environment variables)
-See `.env.example`. The important ones: `MAX_FILE_MB` (per-file limit), `JOB_TTL_MINUTES` (how long results are kept), `RATE_LIMIT` (requests per IP per 10 minutes) and `TRUST_PROXY` (set to true behind a reverse proxy so rate limiting sees real IPs).
+See `.env.example`. The important ones: `MAX_FILE_MB` (per-file limit), `JOB_TTL_MINUTES` (how long results are kept), `RATE_LIMIT` (tool requests per visitor IP per 10 minutes) and `TRUST_PROXY` (set to true on the API host behind its trusted reverse proxy so rate limiting sees real visitor IPs).
 
 ## How it is built
 - `server.js`: Express app, security headers, upload limits, rate limiting, downloads, cleanup

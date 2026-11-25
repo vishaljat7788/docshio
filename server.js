@@ -20,7 +20,10 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const MAX_FILE_MB = parseInt(process.env.MAX_FILE_MB || '50', 10);
 const MAX_FILES = 20;
 const JOB_TTL_MS = parseInt(process.env.JOB_TTL_MINUTES || '30', 10) * 60 * 1000;
-const RATE_LIMIT_PER_10_MIN = parseInt(process.env.RATE_LIMIT || '60', 10);
+// A higher default avoids blocking normal use from shared office/mobile-network IPs.
+// Production deployments behind a proxy must set TRUST_PROXY so clients are keyed
+// by their actual IP instead of the proxy's shared IP.
+const RATE_LIMIT_PER_10_MIN = parseInt(process.env.RATE_LIMIT || '300', 10);
 const DATA_DIR = process.env.DATA_DIR || path.join(os.tmpdir(), 'docxmaster');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const JOB_DIR = path.join(DATA_DIR, 'jobs');
