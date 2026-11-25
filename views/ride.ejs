@@ -1,0 +1,24 @@
+<%- include('partials/head') %>
+<section class="wrap narrow">
+  <h1><%= ride.from %> → <%= ride.to %></h1>
+  <p class="lead"><%= new Date(ride.date).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'}) %>, <%= ride.time %> </p>
+  <div class="detail">
+    <div>
+      <h3>Driver</h3><p><%= ride.driver.name %></p>
+      <h3>Car</h3><p><%= ride.car || 'Not provided' %></p>
+      <h3>Message from the driver</h3><p><%= ride.note || '-' %></p>
+      <h3>Booking type</h3><p><%= ride.instant ? 'Instant booking' : 'Driver approval required' %></p>
+    </div>
+    <form class="book" method="post" action="/ride/<%= ride.id %>/book">
+      <div class="big">₹<%= ride.price %> <small>per seat</small></div>
+      <p class="muted"><%= ride.left %> seat<%= ride.left>1?'s':'' %> available</p>
+      <% if (error) { %><p class="err"><%= error %></p><% } %>
+      <% if (ride.left > 0) { %>
+        <label>Seats<select name="seats"><% for (let i=1;i<=ride.left;i++){ %><option><%= i %></option><% } %></select></label>
+        <p class="muted">A <%= fee*100 %>% service fee is added at checkout.</p>
+        <button class="btn block"><%= ride.instant ? 'Book now' : 'Send request' %></button>
+      <% } else { %><p class="err">This ride is full.</p><% } %>
+    </form>
+  </div>
+</section>
+<%- include('partials/foot') %>

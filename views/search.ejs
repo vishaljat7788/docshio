@@ -1,0 +1,18 @@
+<%- include('partials/head') %>
+<section class="wrap narrow">
+  <%- include('partials/searchbar') %>
+  <h2 class="mt"><%= rides.length %> ride<%= rides.length===1?'':'s' %> found</h2>
+  <% if (!rides.length) { %>
+    <div class="empty"><p>There are no rides on this route yet. Create an alert or publish a ride yourself.</p>
+    <a class="btn" href="/offer">Offer a ride</a></div>
+  <% } %>
+  <% rides.forEach(r => { %>
+    <a class="ride" href="/ride/<%= r.id %>">
+      <div class="when"><b><%= r.time %></b><small><%= new Date(r.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) %></small></div>
+      <div class="path"><span><%= r.from %></span><span><%= r.to %></span></div>
+      <div class="meta"><%= r.driver.name %><small><%= r.left %> seat<%= r.left>1?'s':'' %> left<%= r.instant?' · Instant booking':'' %></small></div>
+      <div class="price">₹<%= r.price %><small>per seat</small></div>
+    </a>
+  <% }) %>
+</section>
+<%- include('partials/foot') %>

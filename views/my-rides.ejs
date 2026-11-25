@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<section class="wrap narrow">
+  <h1>My rides</h1>
+  <h2>Rides I booked</h2>
+  <% if (!booked.length) { %><div class="empty"><p>You haven't booked any rides yet.</p><a class="btn" href="/search">Find a ride</a></div><% } %>
+  <% booked.forEach(b => { %>
+    <div class="ride static">
+      <div class="when"><b><%= b.ride.time %></b><small><%= b.ride.date %></small></div>
+      <div class="path"><span><%= b.ride.from %></span><span><%= b.ride.to %></span></div>
+      <div class="meta"><span class="tag <%= b.status %>"><%= b.status %></span><small><%= b.seats %> seat(s) · ₹<%= b.total %></small></div>
+      <% if (b.status==='confirmed'||b.status==='pending') { %>
+        <form method="post" action="/booking/<%= b.id %>/cancel"><button class="btn small ghost">Cancel</button></form>
+      <% } %>
+    </div>
+  <% }) %>
+
+  <h2 class="mt">Rides I published</h2>
+  <% if (!offered.length) { %><div class="empty"><p>You haven't published any rides yet.</p><a class="btn" href="/offer">Offer a ride</a></div><% } %>
+  <% offered.forEach(r => { %>
+    <div class="ride static col">
+      <div class="row"><div class="path"><span><%= r.from %></span><span><%= r.to %></span></div>
+      <div class="meta"><%= r.date %>, <%= r.time %><small><%= r.left %>/<%= r.seats %> seats left</small></div>
+      <div class="price">₹<%= r.price %></div></div>
+      <% r.requests.forEach(b => { %>
+        <div class="req"><span><%= b.passenger.name %> · <%= b.seats %> seat(s)</span><span class="tag <%= b.status %>"><%= b.status %></span>
+        <% if (b.status==='pending') { %>
+          <form method="post" action="/booking/<%= b.id %>/accept"><button class="btn small">Accept</button></form>
+          <form method="post" action="/booking/<%= b.id %>/decline"><button class="btn small ghost">Decline</button></form>
+        <% } %></div>
+      <% }) %>
+    </div>
+  <% }) %>
+</section>
+<%- include('partials/foot') %>
