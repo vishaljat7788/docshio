@@ -406,7 +406,14 @@
         xhr.onload = () => {
           const body = xhr.response;
           if (xhr.status >= 200 && xhr.status < 300 && body && body.token) return resolve(body);
-          reject(new Error((body && body.error) || `The server returned an error (${xhr.status}).`));
+          const retryAfter = Number(xhr.getResponseHeader('Retry-After'));
+          const message = body && body.error;
+          if (xhr.status === 429 && !message) {
+            return reject(new Error(retryAfter > 0
+              ? `The API host is temporarily limiting requests. Please try again in ${retryAfter} seconds.`
+              : 'The API host is temporarily limiting requests. Please wait a few minutes and try again.'));
+          }
+          reject(new Error(message || `The server returned an error (${xhr.status}).`));
         };
         xhr.send(form);
       });

@@ -33,7 +33,15 @@ const toolById = new Map(META.tools.map(t => [t.id, t]));
 /* ------------------------------------------------------------ app */
 const app = express();
 app.disable('x-powered-by');
-if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : process.env.TRUST_PROXY);
+// This API is deployed behind Vercel/Render reverse proxies. Trust the forwarded
+// chain by default so rate limiting uses the visitor IP instead of one shared
+// proxy IP. Set TRUST_PROXY=false only when exposing the API directly without a
+// trusted reverse proxy; a string value can still specify a custom hop count.
+if (process.env.TRUST_PROXY !== 'false') {
+  app.set('trust proxy', process.env.TRUST_PROXY && process.env.TRUST_PROXY !== 'true'
+    ? process.env.TRUST_PROXY
+    : true);
+}
 
 app.use(helmet({
   contentSecurityPolicy: {
