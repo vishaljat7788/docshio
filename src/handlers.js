@@ -23,6 +23,38 @@ const { clamp, parseRanges, baseName, hexToRgb, formatSize } = require('./utils'
 
 const execFileP = promisify(execFile);
 
+function xmlEscape(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+  })[ch]);
+}
+
+async function docxFromExtractedText(text) {
+  const zip = new (require('jszip'))();
+  const pageXml = text.split('\f').map(page => {
+    const paragraphs = page.split(/\r?\n/).map(line => line.trimEnd())
+      .filter(line => line.trim())
+      .map(line => `<w:p><w:r><w:t xml:space="preserve">${xmlEscape(line)}</w:t></w:r></w:p>`)
+      .join('');
+    return paragraphs || '<w:p/>';
+  });
+  const body = pageXml.map((xml, i) => `${i ? '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' : ''}${xml}`).join('');
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`);
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+async function docxHasText(file) {
+  try {
+    const zip = await require('jszip').loadAsync(await fs.readFile(file));
+    const xml = await zip.file('word/document.xml')?.async('string');
+    return Boolean(xml && /<w:t(?:\s[^>]*)?>\s*[^<\s]/.test(xml));
+  } catch (_) {
+    return false;
+  }
+}
+
 const MAX_RENDER_PAGES = parseInt(process.env.MAX_RENDER_PAGES || '200', 10);
 const TOOL_TIMEOUT_MS = parseInt(process.env.TOOL_TIMEOUT_SECONDS || '120', 10) * 1000;
 const MAX_IMAGE_PIXELS = 100e6;
@@ -625,8 +657,41 @@ for (const id of ['pdf-to-word', 'pdf-to-powerpoint', 'pdf-to-excel', 'word-to-p
     }
     const outName = `${baseName(files[0].name)}.${tool.ext}`;
     const outPath = path.join(ctx.scratch, outName);
-    try { return [{ name: outName, data: await fs.readFile(outPath) }]; }
-    catch (_) { throw new UserError('The converter could not create this output format.'); }
+    try {
+      const output = await fs.readFile(outPath);
+      if (id !== 'pdf-to-word' || await docxHasText(outPath)) {
+        return [{ name: outName, data: output }];
+      }
+
+      // LibreOffice's PDF import can produce a DOCX containing pages but no
+      // editable text (notably for some signed or scanned PDFs). Recover the
+      // OCR/text layer directly into WordprocessingML instead of returning a
+      // file that opens as a blank page.
+      const textPath = path.join(ctx.scratch, 'word-fallback.txt');
+      await runBinary('pdftotext', ['-layout', inputPath, textPath], 'PDF text extraction is unavailable on this server (poppler-utils is not installed).');
+      let extracted = (await fs.readFile(textPath, 'utf8')).replace(/\r/g, '').trim();
+      if (!extracted) {
+        const forcedOcrPath = path.join(ctx.scratch, 'forced-ocr.pdf');
+        try {
+          await runBinary('ocrmypdf', ['--force-ocr', '--output-type', 'pdf', inputPath, forcedOcrPath], 'Scanned PDF to Word conversion needs OCRmyPDF and Tesseract installed on the server.');
+          await runBinary('pdftotext', ['-layout', forcedOcrPath, textPath], 'PDF text extraction is unavailable on this server (poppler-utils is not installed).');
+          extracted = (await fs.readFile(textPath, 'utf8')).replace(/\r/g, '').trim();
+        } catch (e) {
+          if (e instanceof UserError) throw e;
+          if (/encrypted|password/i.test(`${e.stderr || ''} ${e.message || ''}`)) throw new UserError('This PDF is password protected. Remove the password first.');
+          throw new UserError('OCR could not recover readable text from this PDF. Try a clearer scan.');
+        }
+      }
+      if (!extracted) throw new UserError('No readable text was found in this PDF, even after OCR. Try running OCR PDF first or use a clearer scan.');
+      return [{
+        name: outName,
+        data: await docxFromExtractedText(extracted),
+        note: 'Text was recovered into an editable Word document. The original PDF layout could not be preserved.'
+      }];
+    } catch (e) {
+      if (e instanceof UserError) throw e;
+      throw new UserError('The converter could not create a readable Word document.');
+    }
   });
 }
 
